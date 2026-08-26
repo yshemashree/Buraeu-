@@ -47,6 +47,8 @@ import SpoofTheSystem from '@/pages/spoof-the-system';
 import FraudDetective from '@/pages/fraud-detective';
 import Leaderboard from '@/pages/leaderboard';
 import Admin from '@/pages/admin';
+import LedDisplay from '@/pages/led-display';
+import AiDemo from '@/pages/ai-demo';
 
 const queryClient = new QueryClient();
 
@@ -148,6 +150,8 @@ function Router() {
       </Route>
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/admin" component={Admin} />
+      <Route path="/led" component={LedDisplay} />
+      <Route path="/ai-demo/:screenId" component={AiDemo} />
       <Route component={NotFound} />
     </Switch>
   );

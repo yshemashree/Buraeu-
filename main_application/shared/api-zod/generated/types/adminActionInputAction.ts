@@ -15,4 +15,5 @@ export const AdminActionInputAction = {
   void_run: 'void_run',
   delete_upload: 'delete_upload',
   acknowledge_six_degrees_caution: 'acknowledge_six_degrees_caution',
+  set_spoof_url: 'set_spoof_url',
 } as const;

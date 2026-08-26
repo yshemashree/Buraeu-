@@ -8,6 +8,7 @@ import {
   playersTable,
   runsTable,
   SETTING_SIX_DEGREES_CAUTION_ACK,
+  SETTING_SPOOF_LIVE_URL,
   spoofUploadsTable,
   type GameKey,
 } from "@db";
@@ -21,7 +22,7 @@ import {
   RunAdminActionResponse,
 } from "@shared/api-zod";
 
-import { buildAccuracyReport, foolsFromSpoofDetail } from "../lib/accuracy";
+import { buildAccuracyReport } from "../lib/accuracy";
 import { requireAdmin } from "../lib/adminAuth";
 import { clearDemoRows, seedDemoRows } from "../lib/demoSeed";
 import { currentEventDay } from "../lib/eventDay";
@@ -48,6 +49,15 @@ async function sixDegreesAcknowledged(): Promise<boolean> {
   return row?.value === true;
 }
 
+async function currentSpoofLiveUrl(): Promise<string | null> {
+  const [row] = await db
+    .select()
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.key, SETTING_SPOOF_LIVE_URL))
+    .limit(1);
+  return typeof row?.value === "string" ? row.value : null;
+}
+
 router.get("/admin/stats", async (_req, res): Promise<void> => {
   const eventDay = currentEventDay();
   const live = isNull(runsTable.voidedAt);
@@ -65,6 +75,7 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
     [uploads],
     acknowledged,
     cumulative,
+    spoofLiveUrl,
   ] = await Promise.all([
     db.select({ n: count() }).from(playersTable),
     db.select({ n: count() }).from(runsTable).where(live),
@@ -102,6 +113,7 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
       .where(isNull(spoofUploadsTable.deletedAt)),
     sixDegreesAcknowledged(),
     db.select().from(leaderboardCumulativeView),
+    currentSpoofLiveUrl(),
   ]);
 
   const byGame = new Map(perGameRows.map((row) => [row.game, row]));
@@ -135,6 +147,7 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
       uploadsRetained: uploads?.n ?? 0,
       sixDegreesCautionAcknowledged: acknowledged,
       eventDay,
+      spoofLiveUrl,
     }),
   );
 });
@@ -183,73 +196,28 @@ router.get("/admin/leads", async (_req, res): Promise<void> => {
 });
 
 router.get("/admin/draw-pools", async (_req, res): Promise<void> => {
-  const [spoofRuns, board] = await Promise.all([
-    db
-      .select({
-        playerId: runsTable.playerId,
-        points: runsTable.points,
-        detail: runsTable.detail,
-        workName: playersTable.workName,
-        email: playersTable.email,
-        company: playersTable.company,
-        phone: playersTable.phone,
-      })
-      .from(runsTable)
-      .innerJoin(playersTable, eq(playersTable.id, runsTable.playerId))
-      .where(
-        and(
-          eq(runsTable.game, "spoof_the_system"),
-          isNull(runsTable.voidedAt),
-          eq(playersTable.isDemo, false),
-        ),
-      ),
+  // Spoof the System is now a plain redirect to the client's live link (no
+  // score/API integration on our side per the offline event spec), so the old
+  // fools-based AirPods/iPad pools no longer have a mechanic behind them.
+  // Fraud Fighter (all three games played) is unaffected and still computed
+  // from the cumulative leaderboard.
+  const [board, emails] = await Promise.all([
     db.select().from(leaderboardCumulativeView),
+    db.select({ id: playersTable.id, email: playersTable.email, phone: playersTable.phone }).from(playersTable),
   ]);
 
-  // Qualification follows the player's best Spoof run, matching how the
-  // leaderboard scores that game.
-  const best = new Map<string, { points: number; fools: number; entry: Record<string, unknown> }>();
-  for (const run of spoofRuns) {
-    const existing = best.get(run.playerId);
-    if (existing !== undefined && existing.points >= run.points) continue;
-    best.set(run.playerId, {
-      points: run.points,
-      fools: foolsFromSpoofDetail(run.detail),
-      entry: {
-        playerId: run.playerId,
-        workName: run.workName,
-        email: run.email,
-        company: run.company,
-        phone: run.phone,
-      },
-    });
-  }
-
-  const pool = (fools: number) =>
-    [...best.values()]
-      .filter((b) => b.fools === fools)
-      .map((b) => ({ ...b.entry, fools: b.fools }));
-
-  const playerById = new Map(
-    spoofRuns.map((r) => [
-      r.playerId,
-      { workName: r.workName, email: r.email, company: r.company, phone: r.phone },
-    ]),
-  );
+  const contactById = new Map(emails.map((p) => [p.id, p]));
 
   res.json(
     GetDrawPoolsResponse.parse({
-      airpods: pool(2),
-      ipad: pool(3),
       fraudFighter: board
         .filter((r) => (r.gamesPlayed ?? 0) === 3 && r.isDemo !== true)
         .map((r) => ({
           playerId: r.playerId ?? "",
           workName: r.workName ?? "",
-          email: playerById.get(r.playerId ?? "")?.email ?? "",
+          email: contactById.get(r.playerId ?? "")?.email ?? "",
           company: r.company ?? "",
-          phone: playerById.get(r.playerId ?? "")?.phone,
-          fools: best.get(r.playerId ?? "")?.fools ?? 0,
+          phone: contactById.get(r.playerId ?? "")?.phone,
         })),
     }),
   );
@@ -293,13 +261,37 @@ router.post("/admin/actions", async (req, res): Promise<void> => {
     return;
   }
 
-  const { action, runId, uploadId } = parsed.data;
+  const { action, runId, uploadId, value } = parsed.data;
 
   const reply = (applied: boolean, message: string, affected?: number) => {
     res.json(
       RunAdminActionResponse.parse({ action, applied, affected, message }),
     );
   };
+
+  if (action === "set_spoof_url") {
+    const url = (value ?? "").trim();
+    if (url.length === 0) {
+      res.status(400).json({ error: "Enter a live URL to redirect to.", field: "value" });
+      return;
+    }
+    try {
+      // eslint-disable-next-line no-new
+      new URL(url);
+    } catch {
+      res.status(400).json({ error: "That doesn't look like a valid URL.", field: "value" });
+      return;
+    }
+    await db
+      .insert(appSettingsTable)
+      .values({ key: SETTING_SPOOF_LIVE_URL, value: url })
+      .onConflictDoUpdate({
+        target: appSettingsTable.key,
+        set: { value: url, updatedAt: new Date() },
+      });
+    reply(true, "Spoof the System live URL updated.");
+    return;
+  }
 
   if (action === "clear_demo_rows") {
     const affected = await clearDemoRows();

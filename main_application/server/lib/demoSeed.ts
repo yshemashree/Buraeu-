@@ -13,21 +13,22 @@ interface DemoPlayer {
   workName: string;
   company: string;
   spotTheFraud?: number;
-  spoofTheSystem?: 0 | 40 | 60 | 75;
+  /** Whether this demo row "played" Game 2. Always worth 0 points — it's a live-link redirect, not scored. */
+  playedSpoof?: boolean;
   fraudDetective?: number;
 }
 
 const DEMO_PLAYERS: DemoPlayer[] = [
-  { workName: "Ananya Iyer", company: "Razorpay", spotTheFraud: 88, spoofTheSystem: 75, fraudDetective: 74 },
-  { workName: "Rohit Malhotra", company: "HDFC Bank", spotTheFraud: 74, spoofTheSystem: 60, fraudDetective: 80 },
-  { workName: "Ishita Verma", company: "ICICI Bank", spotTheFraud: 62, spoofTheSystem: 60, fraudDetective: 84 },
-  { workName: "Kavya Nair", company: "CRED", spotTheFraud: 66, spoofTheSystem: 40, fraudDetective: 74 },
-  { workName: "Arjun Deshpande", company: "Axis Bank", spotTheFraud: 52, spoofTheSystem: 40, fraudDetective: 63 },
-  { workName: "Meera Krishnan", company: "PhonePe", spotTheFraud: 80, spoofTheSystem: 0, fraudDetective: 48 },
+  { workName: "Ananya Iyer", company: "Razorpay", spotTheFraud: 88, playedSpoof: true, fraudDetective: 74 },
+  { workName: "Rohit Malhotra", company: "HDFC Bank", spotTheFraud: 74, playedSpoof: true, fraudDetective: 80 },
+  { workName: "Ishita Verma", company: "ICICI Bank", spotTheFraud: 62, playedSpoof: true, fraudDetective: 84 },
+  { workName: "Kavya Nair", company: "CRED", spotTheFraud: 66, playedSpoof: true, fraudDetective: 74 },
+  { workName: "Arjun Deshpande", company: "Axis Bank", spotTheFraud: 52, playedSpoof: true, fraudDetective: 63 },
+  { workName: "Meera Krishnan", company: "PhonePe", spotTheFraud: 80, playedSpoof: false, fraudDetective: 48 },
   { workName: "Sneha Pillai", company: "Zerodha", spotTheFraud: 96, fraudDetective: 90 },
-  { workName: "Karthik Reddy", company: "Slice", spoofTheSystem: 75, fraudDetective: 63 },
-  { workName: "Vikram Sethi", company: "Paytm", spotTheFraud: 44, spoofTheSystem: 40 },
-  { workName: "Nikhil Bhatt", company: "Groww", spoofTheSystem: 0, fraudDetective: 68 },
+  { workName: "Karthik Reddy", company: "Slice", playedSpoof: true, fraudDetective: 63 },
+  { workName: "Vikram Sethi", company: "Paytm", spotTheFraud: 44, playedSpoof: true },
+  { workName: "Nikhil Bhatt", company: "Groww", playedSpoof: false, fraudDetective: 68 },
   { workName: "Divya Menon", company: "Kotak Mahindra Bank", spotTheFraud: 38 },
   { workName: "Aditya Rao", company: "Jupiter", spotTheFraud: 25 },
 ];
@@ -41,25 +42,9 @@ const demoEmail = (name: string): string => `${slug(name)}@demo.bureau.invalid`;
 const demoPhone = (index: number): string =>
   `9${String(800000000 + index * 111111).padStart(9, "0")}`;
 
-function spoofDetail(points: 0 | 40 | 60 | 75) {
-  const fools = points === 75 ? 3 : points === 60 ? 2 : points === 40 ? 1 : 0;
-  const attempts = [1, 2, 3]
-    .slice(0, Math.min(3, fools + 1))
-    .map((level) => ({ level, fooled: level <= fools, confidence: level <= fools ? 0.31 : 0.87 }));
-  const tier =
-    points === 75 ? "Master" : points >= 40 ? "Achiever" : "Participation";
-  return {
-    attempts,
-    ladderReached: fools,
-    quitVoluntarily: false,
-    drawPool: fools === 3 ? "ipad" : fools === 2 ? "airpods" : null,
-    tier,
-  };
-}
-
 function detailFor(game: GameKey, points: number): Record<string, unknown> {
   if (game === "spoof_the_system") {
-    return spoofDetail(points as 0 | 40 | 60 | 75);
+    return { redirected: true, demo: true };
   }
   if (game === "fraud_detective") {
     const caseCount = Math.floor(points / 16);
@@ -123,7 +108,8 @@ export async function seedDemoRows(): Promise<SeedResult> {
 
     const scores: [GameKey, number | undefined][] = [
       ["spot_the_fraud", demo.spotTheFraud],
-      ["spoof_the_system", demo.spoofTheSystem],
+      // Game 2 is a redirect with no score of its own; a played row is always 0.
+      ["spoof_the_system", demo.playedSpoof ? 0 : undefined],
       ["fraud_detective", demo.fraudDetective],
     ];
 

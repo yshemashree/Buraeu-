@@ -8,11 +8,13 @@ import {
 } from '@shared/api-client-react';
 import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/layout';
-import { Download, Users, Gamepad2, Trash2, ShieldAlert } from 'lucide-react';
+import { Download, Users, Gamepad2, Trash2, ShieldAlert, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import { IconTile } from '@/components/bureau/icon-tile';
 import { EyebrowTag } from '@/components/bureau/eyebrow-tag';
 import { cn } from '@/lib/utils';
+import { QuestionManager } from '@/components/admin/question-manager';
 
 const BureauInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
@@ -120,6 +122,26 @@ function AdminDashboard({ passcode }: { passcode: string }) {
     a.click();
   };
 
+  const handleExportExcel = () => {
+    if (!leads) return;
+    const rows = leads.map((l) => ({
+      'Player ID': l.playerId,
+      'Name': l.workName,
+      'Email': l.email,
+      'Phone': l.phone,
+      'Company': l.company,
+      'Job Function': l.jobFunction || '',
+      'Consent Date': l.consentAt || '',
+      'Games Played': l.gamesPlayed,
+      'Tier': l.tier || '',
+      'Total Points': l.total,
+    }));
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, sheet, 'Leads');
+    XLSX.writeFile(workbook, `bureau-leads-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
   const handleSeedDemoRows = () => {
     if (confirm("Seed fake entries onto the leaderboard?")) {
       actionMutation.mutate({ data: { action: 'seed_demo_rows' } }, {
@@ -142,6 +164,22 @@ function AdminDashboard({ passcode }: { passcode: string }) {
     }
   };
 
+  const [spoofUrlDraft, setSpoofUrlDraft] = useState('');
+  const [spoofUrlTouched, setSpoofUrlTouched] = useState(false);
+  React.useEffect(() => {
+    // Sync the draft from the server once it loads, but never overwrite text
+    // the host is actively editing.
+    if (!spoofUrlTouched && stats?.spoofLiveUrl) setSpoofUrlDraft(stats.spoofLiveUrl);
+  }, [stats?.spoofLiveUrl, spoofUrlTouched]);
+
+  const handleSaveSpoofUrl = () => {
+    if (!spoofUrlDraft.trim()) return;
+    actionMutation.mutate({ data: { action: 'set_spoof_url', value: spoofUrlDraft.trim() } }, {
+      onSuccess: () => { toast({ title: "Live URL saved" }); refetchStats(); },
+      onError: (err: any) => toast({ title: "Could not save URL", description: err?.data?.error, variant: "destructive" }),
+    });
+  };
+
   return (
     /* The one screen exempt from the no-scroll rule: this is the host's
        operating console, not a player surface, and condensing it would cost
@@ -153,9 +191,14 @@ function AdminDashboard({ passcode }: { passcode: string }) {
             <EyebrowTag>Operator Panel</EyebrowTag>
             <h1 className="mt-3 font-sans text-display-lg font-normal text-white">Host Dashboard</h1>
           </div>
-          <Button variant="outline" onClick={handleExportCSV} className="w-full">
-            <Download className="mr-2 size-4" strokeWidth={1.5} /> Export CSV ({leads?.length || 0})
-          </Button>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={handleExportCSV} className="w-full">
+              <Download className="mr-2 size-4" strokeWidth={1.5} /> Export CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportExcel} className="w-full">
+              <FileSpreadsheet className="mr-2 size-4" strokeWidth={1.5} /> Export Excel
+            </Button>
+          </div>
         </div>
 
         {stats?.sixDegreesCautionAcknowledged === false && (
@@ -208,15 +251,41 @@ function AdminDashboard({ passcode }: { passcode: string }) {
         </div>
 
         <div className="mt-5 grid gap-5">
+          {/* Game 2 configuration */}
+          <div className="flex flex-col border border-ice-300 bg-white text-russian">
+            <div className="border-b border-ice-300 p-4">
+              <h3 className="font-mono text-eyebrow font-medium uppercase tracking-[0.03em] text-russian">Spoof the System — Live URL</h3>
+            </div>
+            <div className="flex flex-col gap-3 p-4">
+              <p className="text-body-sm text-[var(--text-muted)]">
+                Game 2 redirects attendees to this link. It runs on the client's live platform — our app only opens it.
+              </p>
+              <BureauInput
+                type="url"
+                placeholder="https://..."
+                value={spoofUrlDraft}
+                onChange={(e) => { setSpoofUrlDraft(e.target.value); setSpoofUrlTouched(true); }}
+                className="h-11 border-ice-300 bg-white text-russian placeholder:text-[var(--text-faint)] focus:border-violet-700"
+              />
+              <Button
+                variant="dark"
+                size="sm"
+                onClick={handleSaveSpoofUrl}
+                disabled={!spoofUrlDraft.trim() || actionMutation.isPending}
+                className="self-start"
+              >
+                Save URL
+              </Button>
+            </div>
+          </div>
+
           {/* Draw Pools */}
           <div className="flex flex-col border border-ice-300 bg-white text-russian">
             <div className="border-b border-ice-300 p-4">
               <h3 className="font-mono text-eyebrow font-medium uppercase tracking-[0.03em] text-russian">Draw Pools</h3>
             </div>
             <div className="flex flex-col">
-              <PoolRow label="AirPods Qualifiers (Level 2)" count={pools?.airpods.length} />
-              <PoolRow label="iPad MEGA Draw (Level 3)" count={pools?.ipad.length} highlight="coral" />
-              <PoolRow label="Fraud Fighters (All 3)" count={pools?.fraudFighter.length} highlight="violet" />
+              <PoolRow label="Fraud Fighters (All 3 games)" count={pools?.fraudFighter.length} highlight="violet" />
             </div>
           </div>
 
@@ -267,6 +336,10 @@ function AdminDashboard({ passcode }: { passcode: string }) {
           </div>
         </div>
         
+        <div className="mt-5">
+          <QuestionManager passcode={passcode} />
+        </div>
+
         <div className="mt-5">
           <AccuracySection passcode={passcode} />
         </div>

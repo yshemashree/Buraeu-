@@ -282,7 +282,8 @@ export const GetAdminStatsResponse = zod.object({
   "demoRowCount": zod.number(),
   "uploadsRetained": zod.number(),
   "sixDegreesCautionAcknowledged": zod.boolean(),
-  "eventDay": zod.string().optional()
+  "eventDay": zod.string().optional(),
+  "spoofLiveUrl": zod.string().nullable().optional().describe('The client\'s live URL that Game 2 - Spoof the System redirects to. Null until an admin sets it.\n')
 })
 
 
@@ -317,7 +318,7 @@ export const GetAdminLeadsResponse = zod.array(GetAdminLeadsResponseItem)
 
 
 /**
- * The AirPods pool (fooled the detector exactly twice) and the iPad pool (fooled it three times), plus the all-three-games Fraud Fighter pool.
+ * The all-three-games Fraud Fighter pool. Spoof the System is a plain live-link redirect with no score/API integration, so it no longer feeds a draw pool.
  * @summary Prize draw pools
  */
 export const GetDrawPoolsHeader = zod.object({
@@ -325,29 +326,12 @@ export const GetDrawPoolsHeader = zod.object({
 })
 
 export const GetDrawPoolsResponse = zod.object({
-  "airpods": zod.array(zod.object({
-  "playerId": zod.string(),
-  "workName": zod.string(),
-  "email": zod.string(),
-  "company": zod.string(),
-  "phone": zod.string().optional(),
-  "fools": zod.number()
-})).describe('Fooled the detector exactly twice.'),
-  "ipad": zod.array(zod.object({
-  "playerId": zod.string(),
-  "workName": zod.string(),
-  "email": zod.string(),
-  "company": zod.string(),
-  "phone": zod.string().optional(),
-  "fools": zod.number()
-})).describe('Fooled the detector all three times.'),
   "fraudFighter": zod.array(zod.object({
   "playerId": zod.string(),
   "workName": zod.string(),
   "email": zod.string(),
   "company": zod.string(),
-  "phone": zod.string().optional(),
-  "fools": zod.number()
+  "phone": zod.string().optional()
 })).describe('Played all three games.')
 })
 
@@ -418,10 +402,11 @@ export const RunAdminActionHeader = zod.object({
 })
 
 export const RunAdminActionBody = zod.object({
-  "action": zod.enum(['clear_demo_rows', 'seed_demo_rows', 'void_run', 'delete_upload', 'acknowledge_six_degrees_caution']),
+  "action": zod.enum(['clear_demo_rows', 'seed_demo_rows', 'void_run', 'delete_upload', 'acknowledge_six_degrees_caution', 'set_spoof_url']),
   "runId": zod.string().optional(),
   "uploadId": zod.string().optional(),
-  "playerId": zod.string().optional()
+  "playerId": zod.string().optional(),
+  "value": zod.string().optional().describe('Generic string payload for actions that need one, e.g. the URL for set_spoof_url.\n')
 })
 
 export const RunAdminActionResponse = zod.object({

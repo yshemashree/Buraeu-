@@ -12,4 +12,6 @@ export interface AdminActionInput {
   runId?: string;
   uploadId?: string;
   playerId?: string;
+  /** Generic string payload for actions that need one, e.g. the URL for set_spoof_url. */
+  value?: string;
 }

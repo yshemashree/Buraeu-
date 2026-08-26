@@ -31,7 +31,7 @@ interface GameInfo {
 
 const GAMES: GameInfo[] = [
   { key: 'spot_the_fraud',    label: 'Spot the Fraud',   sub: 'Prepared to test your knowledge?', href: '/spot-the-fraud',   icon: Network,      tone: 'violet' },
-  { key: 'spoof_the_system',  label: 'Spoof the System', sub: 'Beat our synthetic image detector.', href: '/spoof-the-system', icon: ScanFace,     tone: 'coral'  },
+  { key: 'spoof_the_system',  label: 'Spoof the System', sub: "Play Bureau's live challenge.", href: '/spoof-the-system', icon: ScanFace,     tone: 'coral'  },
   { key: 'fraud_detective',   label: 'Fraud Detective',  sub: 'Can you identify the mule rings?',  href: '/fraud-detective',  icon: Fingerprint,  tone: 'lime'   },
 ];
 

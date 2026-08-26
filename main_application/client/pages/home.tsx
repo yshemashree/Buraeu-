@@ -63,7 +63,7 @@ const GAMES: {
   },
   {
     title: 'Spoof the System',
-    desc: 'Beat our synthetic image detector.',
+    desc: "Play Bureau's live challenge — opens in a new tab.",
     icon: ScanFace,
     href: '/spoof-the-system',
     tone: 'coral',

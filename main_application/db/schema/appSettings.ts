@@ -15,4 +15,12 @@ export const appSettingsTable = pgTable("app_settings", {
 
 export const SETTING_SIX_DEGREES_CAUTION_ACK = "six_degrees_caution_ack";
 
+/**
+ * The client's live URL for Game 2 - Spoof the System. Per the offline event
+ * spec, this game is a plain redirect: our system stores/configures the URL
+ * and opens it, nothing more. Admin-editable so the event team can point it
+ * at the right link without a code change.
+ */
+export const SETTING_SPOOF_LIVE_URL = "spoof_live_url";
+
 export type AppSetting = typeof appSettingsTable.$inferSelect;
