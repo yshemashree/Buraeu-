@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startUploadPurge } from "./lib/uploads";
+import { seedQuestionsIfEmpty } from "./lib/seedQuestions";
 
 const rawPort = process.env["PORT"];
 
@@ -30,4 +31,5 @@ app.listen(port, async (err) => {
 
   // Seed quiz questions and detective cases from the static data files on
   // first boot, so the question bank is populated without a separate migration.
+  await seedQuestionsIfEmpty();
 });

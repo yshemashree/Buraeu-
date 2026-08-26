@@ -845,7 +845,7 @@ export const getGetDrawPoolsUrl = () => {
 }
 
 /**
- * The AirPods pool (fooled the detector exactly twice) and the iPad pool (fooled it three times), plus the all-three-games Fraud Fighter pool.
+ * The all-three-games Fraud Fighter pool. Spoof the System is a plain live-link redirect with no score/API integration, so it no longer feeds a draw pool.
  * @summary Prize draw pools
  */
 export const getDrawPools = async ( options?: Parameters<typeof customFetch>[1]): Promise<DrawPools> => {

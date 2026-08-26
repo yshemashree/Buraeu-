@@ -38,6 +38,8 @@ export const quizQuestionsTable = pgTable("quiz_questions", {
   why: text("why").notNull(), // explanation shown after answer
   hook: text("hook").notNull(), // one-line content tag for hosts
   active: integer("active").notNull().default(1), // 0 = disabled, 1 = active
+  /** Admin-controlled display/tie-break order within a level. Lower sorts first. */
+  sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -126,17 +126,3 @@ export function buildAccuracyReport(rows: RunDetailRow[]): AccuracyReport {
     bonusQuestions: bonusQuestions.toReport(),
   };
 }
-
-/** Number of detector fools a Spoof run recorded, for the draw pools. */
-export function foolsFromSpoofDetail(detail: unknown): number {
-  if (!isRecord(detail)) return 0;
-  const attempts = asArray(detail.attempts);
-  if (attempts.length > 0) {
-    return attempts.filter((a) => isRecord(a) && a.fooled === true).length;
-  }
-  // Fall back to the pool the client stamped on the run.
-  const pool = asString(detail.drawPool);
-  if (pool === "ipad") return 3;
-  if (pool === "airpods") return 2;
-  return 0;
-}

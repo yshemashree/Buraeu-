@@ -8,10 +8,6 @@
 import type { DrawEntry } from './drawEntry';
 
 export interface DrawPools {
-  /** Fooled the detector exactly twice. */
-  airpods: DrawEntry[];
-  /** Fooled the detector all three times. */
-  ipad: DrawEntry[];
   /** Played all three games. */
   fraudFighter: DrawEntry[];
 }

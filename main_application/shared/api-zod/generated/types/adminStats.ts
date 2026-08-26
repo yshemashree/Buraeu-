@@ -20,4 +20,9 @@ export interface AdminStats {
   uploadsRetained: number;
   sixDegreesCautionAcknowledged: boolean;
   eventDay?: string;
+  /**
+   * The client's live URL that Game 2 - Spoof the System redirects to. Null until an admin sets it.
+   * @nullable
+   */
+  spoofLiveUrl?: string | null;
 }

@@ -12,5 +12,4 @@ export interface DrawEntry {
   email: string;
   company: string;
   phone?: string;
-  fools: number;
 }

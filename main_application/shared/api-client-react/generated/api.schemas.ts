@@ -275,6 +275,11 @@ export interface AdminStats {
   uploadsRetained: number;
   sixDegreesCautionAcknowledged: boolean;
   eventDay?: string;
+  /**
+   * The client's live URL that Game 2 - Spoof the System redirects to. Null until an admin sets it.
+   * @nullable
+   */
+  spoofLiveUrl?: string | null;
 }
 
 export interface AdminLead {
@@ -306,14 +311,9 @@ export interface DrawEntry {
   email: string;
   company: string;
   phone?: string;
-  fools: number;
 }
 
 export interface DrawPools {
-  /** Fooled the detector exactly twice. */
-  airpods: DrawEntry[];
-  /** Fooled the detector all three times. */
-  ipad: DrawEntry[];
   /** Played all three games. */
   fraudFighter: DrawEntry[];
 }
@@ -343,6 +343,7 @@ export const AdminActionInputAction = {
   void_run: 'void_run',
   delete_upload: 'delete_upload',
   acknowledge_six_degrees_caution: 'acknowledge_six_degrees_caution',
+  set_spoof_url: 'set_spoof_url',
 } as const;
 
 export interface AdminActionInput {
@@ -350,6 +351,8 @@ export interface AdminActionInput {
   runId?: string;
   uploadId?: string;
   playerId?: string;
+  /** Generic string payload for actions that need one, e.g. the URL for set_spoof_url. */
+  value?: string;
 }
 
 export interface AdminActionResult {

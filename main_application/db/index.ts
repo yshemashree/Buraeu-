@@ -95,8 +95,11 @@ const INIT_SQL = `
     why TEXT NOT NULL,
     hook TEXT NOT NULL,
     active INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+
+  ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
 
   CREATE TABLE IF NOT EXISTS detective_cases (
     id TEXT PRIMARY KEY,
