@@ -23,7 +23,7 @@ import { computeStanding } from "../lib/standing";
 const router: IRouter = Router();
 
 /** Fail attempt 1, beat L1, beat L2, beat L3 — plus an abandoned run. */
-const SPOOF_LADDER = new Set([0, 17, 50, 100]);
+const SPOOF_LADDER = new Set([0, 40, 60, 75]);
 
 router.post("/runs", async (req, res): Promise<void> => {
   const parsed = SubmitRunBody.safeParse(req.body);

@@ -51,12 +51,11 @@ const selectBody = (dayFilter: string) => sql.raw(`
     (COUNT(*) FILTER (WHERE r.game = 'spoof_the_system') > 0) AS played_spoof_the_system,
     (COUNT(*) FILTER (WHERE r.game = 'fraud_detective') > 0) AS played_fraud_detective,
     COUNT(DISTINCT r.game)::int AS games_played,
-    (CASE WHEN COUNT(DISTINCT r.game) = 3 THEN 40 ELSE 0 END)::int AS bonus,
+    0::int AS bonus,
     (
       COALESCE(MAX(r.points) FILTER (WHERE r.game = 'spot_the_fraud'), 0)
       + COALESCE(MAX(r.points) FILTER (WHERE r.game = 'spoof_the_system'), 0)
       + COALESCE(MAX(r.points) FILTER (WHERE r.game = 'fraud_detective'), 0)
-      + CASE WHEN COUNT(DISTINCT r.game) = 3 THEN 40 ELSE 0 END
     )::int AS total
   FROM players p
   LEFT JOIN runs r

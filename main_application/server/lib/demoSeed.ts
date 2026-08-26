@@ -13,7 +13,7 @@ interface DemoPlayer {
   workName: string;
   company: string;
   spotTheFraud?: number;
-  spoofTheSystem?: 15 | 40 | 60 | 75;
+  spoofTheSystem?: 0 | 40 | 60 | 75;
   fraudDetective?: number;
 }
 
@@ -23,11 +23,11 @@ const DEMO_PLAYERS: DemoPlayer[] = [
   { workName: "Ishita Verma", company: "ICICI Bank", spotTheFraud: 62, spoofTheSystem: 60, fraudDetective: 84 },
   { workName: "Kavya Nair", company: "CRED", spotTheFraud: 66, spoofTheSystem: 40, fraudDetective: 74 },
   { workName: "Arjun Deshpande", company: "Axis Bank", spotTheFraud: 52, spoofTheSystem: 40, fraudDetective: 63 },
-  { workName: "Meera Krishnan", company: "PhonePe", spotTheFraud: 80, spoofTheSystem: 15, fraudDetective: 48 },
+  { workName: "Meera Krishnan", company: "PhonePe", spotTheFraud: 80, spoofTheSystem: 0, fraudDetective: 48 },
   { workName: "Sneha Pillai", company: "Zerodha", spotTheFraud: 96, fraudDetective: 90 },
   { workName: "Karthik Reddy", company: "Slice", spoofTheSystem: 75, fraudDetective: 63 },
   { workName: "Vikram Sethi", company: "Paytm", spotTheFraud: 44, spoofTheSystem: 40 },
-  { workName: "Nikhil Bhatt", company: "Groww", spoofTheSystem: 15, fraudDetective: 68 },
+  { workName: "Nikhil Bhatt", company: "Groww", spoofTheSystem: 0, fraudDetective: 68 },
   { workName: "Divya Menon", company: "Kotak Mahindra Bank", spotTheFraud: 38 },
   { workName: "Aditya Rao", company: "Jupiter", spotTheFraud: 25 },
 ];
@@ -41,7 +41,7 @@ const demoEmail = (name: string): string => `${slug(name)}@demo.bureau.invalid`;
 const demoPhone = (index: number): string =>
   `9${String(800000000 + index * 111111).padStart(9, "0")}`;
 
-function spoofDetail(points: 15 | 40 | 60 | 75) {
+function spoofDetail(points: 0 | 40 | 60 | 75) {
   const fools = points === 75 ? 3 : points === 60 ? 2 : points === 40 ? 1 : 0;
   const attempts = [1, 2, 3]
     .slice(0, Math.min(3, fools + 1))
@@ -59,7 +59,7 @@ function spoofDetail(points: 15 | 40 | 60 | 75) {
 
 function detailFor(game: GameKey, points: number): Record<string, unknown> {
   if (game === "spoof_the_system") {
-    return spoofDetail(points as 15 | 40 | 60 | 75);
+    return spoofDetail(points as 0 | 40 | 60 | 75);
   }
   if (game === "fraud_detective") {
     const caseCount = Math.floor(points / 16);

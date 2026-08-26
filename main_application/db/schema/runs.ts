@@ -28,12 +28,12 @@ export const runSourceEnum = pgEnum("run_source", ["kiosk", "phone"]);
 /** Hard per-game ceilings. Points are clamped to these on write. */
 export const GAME_CAPS = {
   spot_the_fraud: 100,
-  spoof_the_system: 100,
+  spoof_the_system: 75,
   fraud_detective: 100,
 } as const;
 
 /** Awarded for playing all three games. Derived on read, never stored. */
-export const FRAUD_FIGHTER_BONUS = 40;
+export const FRAUD_FIGHTER_BONUS = 0;
 
 export const MAX_TOTAL =
   GAME_CAPS.spot_the_fraud +
