@@ -10,6 +10,7 @@ import { PrimaryNav } from '@/components/bureau/primary-nav';
 import { ArenaHeader } from '@/components/bureau/arena-header';
 import { QrPanel } from '@/components/qr-panel';
 import { cn } from '@/lib/utils';
+import Landing from '@/pages/landing';
 
 /*
   Copy follows the guideline's voice: declarative, no hype, no exclamation
@@ -96,14 +97,9 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (mounted && !session) {
-      setLocation('/join', { replace: true });
-    }
-  }, [mounted, session, setLocation]);
-
   // Don't render the hub if we're not logged in
-  if (!mounted || !session) return null;
+  if (!mounted) return null;
+  if (!session) return <Landing />;
 
   return (
     <Layout showHeader={false}>

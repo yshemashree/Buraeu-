@@ -124,11 +124,13 @@ export function Layout({
 export function ScreenBody({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return <div className={cn('flex min-h-0 flex-1 flex-col', className)}>{children}</div>;
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn('flex min-h-0 flex-1 flex-col', className)} {...props}>
+      {children}
+    </div>
+  );
 }
 
 export { Link };

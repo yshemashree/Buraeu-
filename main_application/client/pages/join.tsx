@@ -178,7 +178,7 @@ function RegistrationForm({ gameLabel }: { gameLabel?: string }) {
   };
 
   return (
-    <Layout title="Registration">
+    <Layout title="Registration" back="/">
       {/* White hero panel with edge-cluster dots — visual contrast break before the dark form. */}
       <div className="relative -mx-4 mb-0 shrink-0 overflow-hidden bg-white px-4 pb-2 pt-2">
         <div aria-hidden className="bureau-dots-edge pointer-events-none absolute inset-0" />
