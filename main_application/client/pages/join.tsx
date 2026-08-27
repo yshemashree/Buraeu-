@@ -19,6 +19,7 @@ import { Layout } from '@/components/layout';
 import { EyebrowTag } from '@/components/bureau/eyebrow-tag';
 import { cn } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
+import { useSyncState } from '@/hooks/useSyncState';
 
 const JOB_FUNCTIONS = [
   'Fraud and Risk',
@@ -109,6 +110,8 @@ export default function Join() {
   const { session } = usePlayerSession();
   const [, setLocation] = useLocation();
   const returnPath = getReturnPath(useSearch());
+  
+  useSyncState({ type: 'registering' });
 
   useEffect(() => {
     if (session) setLocation(returnPath, { replace: true });
@@ -163,10 +166,11 @@ function RegistrationForm({ gameLabel }: { gameLabel?: string }) {
           window.sessionStorage.setItem('arena_welcome_back', sessionData.player.firstName);
         }
       },
-      onError: () => {
+      onError: (err: any) => {
+        const errorMsg = err?.response?.data?.error || err?.message || "Please check your network and try again.";
         toast({
-          title: "Error registering",
-          description: "Please check your network and try again.",
+          title: "Registration Failed",
+          description: errorMsg,
           variant: "destructive"
         });
       }
@@ -174,7 +178,7 @@ function RegistrationForm({ gameLabel }: { gameLabel?: string }) {
   };
 
   return (
-    <Layout title="Registration" back="/">
+    <Layout title="Registration">
       {/* White hero panel with edge-cluster dots — visual contrast break before the dark form. */}
       <div className="relative -mx-4 mb-0 shrink-0 overflow-hidden bg-white px-4 pb-2 pt-2">
         <div aria-hidden className="bureau-dots-edge pointer-events-none absolute inset-0" />

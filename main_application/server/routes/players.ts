@@ -68,18 +68,9 @@ router.post("/players", async (req, res): Promise<void> => {
   let player = inserted;
   const returning = player === undefined;
 
-  if (player === undefined) {
-    const [existing] = await db
-      .select()
-      .from(playersTable)
-      .where(eq(playersTable.email, entry.email))
-      .limit(1);
-    if (existing === undefined) {
-      req.log.error({ email: entry.email }, "player upsert found no row");
-      res.status(500).json({ error: "Could not save your details." });
-      return;
-    }
-    player = existing;
+  if (returning) {
+    res.status(409).json({ error: "This email has already registered — session already used" });
+    return;
   }
 
   const standing = await computeStanding(player.id, "cumulative");

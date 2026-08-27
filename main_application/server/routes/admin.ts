@@ -9,6 +9,8 @@ import {
   runsTable,
   SETTING_SIX_DEGREES_CAUTION_ACK,
   SETTING_SPOOF_LIVE_URL,
+  SETTING_ENABLE_LEADERBOARD,
+  SETTING_ENABLE_WAITLIST,
   spoofUploadsTable,
   type GameKey,
 } from "@db";
@@ -58,6 +60,15 @@ async function currentSpoofLiveUrl(): Promise<string | null> {
   return typeof row?.value === "string" ? row.value : null;
 }
 
+async function getBooleanSetting(key: string): Promise<boolean> {
+  const [row] = await db
+    .select()
+    .from(appSettingsTable)
+    .where(eq(appSettingsTable.key, key))
+    .limit(1);
+  return row?.value === true;
+}
+
 router.get("/admin/stats", async (_req, res): Promise<void> => {
   const eventDay = currentEventDay();
   const live = isNull(runsTable.voidedAt);
@@ -76,6 +87,8 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
     acknowledged,
     cumulative,
     spoofLiveUrl,
+    enableLeaderboard,
+    enableWaitlist,
   ] = await Promise.all([
     db.select({ n: count() }).from(playersTable),
     db.select({ n: count() }).from(runsTable).where(live),
@@ -114,6 +127,8 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
     sixDegreesAcknowledged(),
     db.select().from(leaderboardCumulativeView),
     currentSpoofLiveUrl(),
+    getBooleanSetting(SETTING_ENABLE_LEADERBOARD),
+    getBooleanSetting(SETTING_ENABLE_WAITLIST),
   ]);
 
   const byGame = new Map(perGameRows.map((row) => [row.game, row]));
@@ -148,6 +163,8 @@ router.get("/admin/stats", async (_req, res): Promise<void> => {
       sixDegreesCautionAcknowledged: acknowledged,
       eventDay,
       spoofLiveUrl,
+      enableLeaderboard,
+      enableWaitlist,
     }),
   );
 });
@@ -271,16 +288,14 @@ router.post("/admin/actions", async (req, res): Promise<void> => {
 
   if (action === "set_spoof_url") {
     const url = (value ?? "").trim();
-    if (url.length === 0) {
-      res.status(400).json({ error: "Enter a live URL to redirect to.", field: "value" });
-      return;
-    }
-    try {
-      // eslint-disable-next-line no-new
-      new URL(url);
-    } catch {
-      res.status(400).json({ error: "That doesn't look like a valid URL.", field: "value" });
-      return;
+    if (url.length > 0) {
+      try {
+        // eslint-disable-next-line no-new
+        new URL(url);
+      } catch {
+        res.status(400).json({ error: "That doesn't look like a valid URL.", field: "value" });
+        return;
+      }
     }
     await db
       .insert(appSettingsTable)
@@ -290,6 +305,32 @@ router.post("/admin/actions", async (req, res): Promise<void> => {
         set: { value: url, updatedAt: new Date() },
       });
     reply(true, "Spoof the System live URL updated.");
+    return;
+  }
+
+  if (action === "set_leaderboard_enabled") {
+    const isEnabled = value === "true";
+    await db
+      .insert(appSettingsTable)
+      .values({ key: SETTING_ENABLE_LEADERBOARD, value: isEnabled })
+      .onConflictDoUpdate({
+        target: appSettingsTable.key,
+        set: { value: isEnabled, updatedAt: new Date() },
+      });
+    reply(true, `Leaderboard ${isEnabled ? "enabled" : "disabled"}.`);
+    return;
+  }
+
+  if (action === "set_waitlist_enabled") {
+    const isEnabled = value === "true";
+    await db
+      .insert(appSettingsTable)
+      .values({ key: SETTING_ENABLE_WAITLIST, value: isEnabled })
+      .onConflictDoUpdate({
+        target: appSettingsTable.key,
+        set: { value: isEnabled, updatedAt: new Date() },
+      });
+    reply(true, `Waitlist ${isEnabled ? "enabled" : "disabled"}.`);
     return;
   }
 

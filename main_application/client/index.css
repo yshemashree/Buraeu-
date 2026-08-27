@@ -13,9 +13,7 @@
     - Cyan is reserved for "live". It is never a fill for a large area.
 */
 
-/* Geist Mono is the technical register and is served from Google Fonts. */
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap');
-
+/* Local fontsource imports are handled in main.tsx */
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";

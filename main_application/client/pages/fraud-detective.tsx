@@ -22,6 +22,7 @@ import {
   StatReadout,
 } from '@/components/bureau';
 import { isDevTestMode } from '@/lib/dev-test-mode';
+import { useSyncState } from '@/hooks/useSyncState';
 
 type GameState = 'rules' | 'primer' | 'case' | 'casefail' | 'bonus' | 'lifeline' | 'highscore' | 'error';
 const CASE_TIMER_SECONDS = 45;
@@ -148,6 +149,25 @@ export default function FraudDetective() {
       setSolved(false);
     }
   }, [gameState, caseIndex, currentCase]);
+
+  useSyncState({
+    type: gameState === 'case' || gameState === 'casefail' ? 'active' : 'idle',
+    game: 'fraud_detective',
+    gameState,
+    caseIndex,
+    currentCase,
+    graphNodes,
+    graphEdges,
+    selectedNode,
+    caseTimeLeft,
+    caseScore,
+    bonusScore,
+    solved,
+    revealed,
+    recoverySkipsRemaining,
+    caseFailCanAdvance
+  });
+
 
   const resetCaseTimer = () => {
     setCaseTimeLeft(CASE_TIMER_SECONDS);

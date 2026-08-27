@@ -283,7 +283,9 @@ export const GetAdminStatsResponse = zod.object({
   "uploadsRetained": zod.number(),
   "sixDegreesCautionAcknowledged": zod.boolean(),
   "eventDay": zod.string().optional(),
-  "spoofLiveUrl": zod.string().nullable().optional().describe('The client\'s live URL that Game 2 - Spoof the System redirects to. Null until an admin sets it.\n')
+  "spoofLiveUrl": zod.string().nullable().optional().describe('The client\'s live URL that Game 2 - Spoof the System redirects to. Null until an admin sets it.\n'),
+  "enableLeaderboard": zod.boolean().optional(),
+  "enableWaitlist": zod.boolean().optional()
 })
 
 
@@ -402,7 +404,7 @@ export const RunAdminActionHeader = zod.object({
 })
 
 export const RunAdminActionBody = zod.object({
-  "action": zod.enum(['clear_demo_rows', 'seed_demo_rows', 'void_run', 'delete_upload', 'acknowledge_six_degrees_caution', 'set_spoof_url']),
+  "action": zod.enum(['clear_demo_rows', 'seed_demo_rows', 'void_run', 'delete_upload', 'acknowledge_six_degrees_caution', 'set_spoof_url', 'set_leaderboard_enabled', 'set_waitlist_enabled']),
   "runId": zod.string().optional(),
   "uploadId": zod.string().optional(),
   "playerId": zod.string().optional(),

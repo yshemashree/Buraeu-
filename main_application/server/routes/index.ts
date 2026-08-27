@@ -8,6 +8,7 @@ import adminRouter from "./admin";
 import adminQuestionsRouter from "./adminQuestions";
 import questionsRouter from "./questions";
 import settingsRouter from "./settings";
+import { syncRouter } from "./sync";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(adminRouter);
 router.use(adminQuestionsRouter);
 router.use(questionsRouter);
 router.use(settingsRouter);
+router.use("/sync", syncRouter);
 
 export default router;

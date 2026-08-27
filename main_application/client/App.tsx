@@ -43,7 +43,7 @@ import { PlayerGate } from '@/components/player-gate';
 import Home from '@/pages/home';
 import Join from '@/pages/join';
 import SpotTheFraud from '@/pages/spot-the-fraud';
-import SpoofTheSystem from '@/pages/spoof-the-system';
+import BeatTheDeepfakeSystem from '@/pages/beat-the-deepfake-system';
 import FraudDetective from '@/pages/fraud-detective';
 import Leaderboard from '@/pages/leaderboard';
 import Admin from '@/pages/admin';
@@ -54,7 +54,7 @@ const queryClient = new QueryClient();
 
 const GAME_LABELS: Record<string, string> = {
   '/spot-the-fraud': 'Spot the Fraud',
-  '/spoof-the-system': 'Spoof the System',
+  '/beat-the-deepfake-system': 'Spoof the System',
   '/fraud-detective': 'Fraud Detective',
 };
 
@@ -142,8 +142,8 @@ function Router() {
       <Route path="/spot-the-fraud">
         {() => <ProtectedRoute component={SpotTheFraud} path="/spot-the-fraud" />}
       </Route>
-      <Route path="/spoof-the-system">
-        {() => <ProtectedRoute component={SpoofTheSystem} path="/spoof-the-system" />}
+      <Route path="/beat-the-deepfake-system">
+        {() => <ProtectedRoute component={BeatTheDeepfakeSystem} path="/beat-the-deepfake-system" />}
       </Route>
       <Route path="/fraud-detective">
         {() => <ProtectedRoute component={FraudDetective} path="/fraud-detective" />}

@@ -34,54 +34,62 @@ export interface DemoScreenConfig {
   steps: DemoStep[];
 }
 
-const SPOT_STEPS: DemoStep[] = [
-  { durationMs: 4000, headline: 'Meet Bureau AI', body: "I'm Bureau's fraud-detection assistant. Watch me analyse a live signal in real time." },
-  { durationMs: 5000, headline: 'Scanning device signals', body: 'Checking device fingerprint, network reputation and behavioural biometrics…' },
-  { durationMs: 5000, headline: 'Cross-referencing the network', body: 'Comparing this session against millions of prior fraud patterns across the Bureau network.' },
-  { durationMs: 5000, headline: 'Verdict', body: 'High-confidence match: synthetic identity ring detected. Flagged in 340ms.' },
-  { durationMs: 4000, headline: 'That’s the Bureau edge', body: 'Real-time, explainable fraud detection — before the transaction ever completes.' },
+const IDENTITY_STEPS: DemoStep[] = [
+  { durationMs: 4000, headline: 'Bureau Identity', body: 'Watch Bureau AI analyse identity verification in real time.' },
+  { durationMs: 5000, headline: 'Document verification', body: 'Extracting data, checking watermarks and running liveness detection…' },
+  { durationMs: 4000, headline: 'Verified', body: 'Identity confirmed with 99.8% confidence in 1.2 seconds.' },
 ];
 
-const DETECTIVE_STEPS: DemoStep[] = [
-  { durationMs: 4000, headline: 'Fraud Detective, AI edition', body: 'Watch Bureau AI trace a mule network across thousands of accounts.' },
+const SECURITY_STEPS: DemoStep[] = [
+  { durationMs: 4000, headline: 'Bureau Security', body: 'Watch Bureau AI detect a synthetic identity ring.' },
+  { durationMs: 5000, headline: 'Scanning device signals', body: 'Checking device fingerprint, network reputation and behavioural biometrics…' },
+  { durationMs: 4000, headline: 'Threat Detected', body: 'Device previously associated with known fraud ring flagged.' },
+];
+
+const FRAUD_STEPS: DemoStep[] = [
+  { durationMs: 4000, headline: 'Bureau Fraud', body: 'Fraud Detective, AI edition: watch Bureau trace a mule network.' },
   { durationMs: 5000, headline: 'Mapping the graph', body: 'Building a transaction graph from anonymised account activity…' },
-  { durationMs: 5000, headline: 'Finding the bridge', body: 'One account links two clusters that should never have touched. That’s the tell.' },
-  { durationMs: 5000, headline: 'Ring confirmed', body: '14 accounts, 1 coordinated ring, identified without a single manual review.' },
-  { durationMs: 4000, headline: 'From weeks to milliseconds', body: 'This is what Bureau’s graph intelligence looks like in production.' },
+  { durationMs: 5000, headline: 'Ring confirmed', body: '14 accounts, 1 coordinated ring, identified instantly.' },
+];
+
+const MONITOR_STEPS: DemoStep[] = [
+  { durationMs: 4000, headline: 'Bureau Monitor', body: 'Continuous evaluation of active accounts.' },
+  { durationMs: 5000, headline: 'Ongoing risk assessment', body: 'Monitoring transaction velocity and account changes…' },
+  { durationMs: 4000, headline: 'Safe', body: 'Account behaviour is consistent with normal usage.' },
 ];
 
 export const DEMO_SCREENS: DemoScreenConfig[] = [
   {
     id: '1',
-    label: 'AI Demo — Screen 1',
+    label: 'AI Demo — Identity',
     orientation: 'vertical',
-    ctaLabel: 'Tap to see Bureau AI in action',
-    loopVideoSrc: '/assets/ai-demo/screen-1-loop.mp4',
-    steps: SPOT_STEPS,
+    ctaLabel: 'Tap to see Identity AI in action',
+    loopVideoSrc: '/assets/ai-demo/bureau-vertical-demo-video.mp4',
+    steps: IDENTITY_STEPS,
   },
   {
     id: '2',
-    label: 'AI Demo — Screen 2',
+    label: 'AI Demo — Security',
     orientation: 'vertical',
-    ctaLabel: 'Tap to see Bureau AI in action',
-    loopVideoSrc: '/assets/ai-demo/screen-2-loop.mp4',
-    steps: SPOT_STEPS,
+    ctaLabel: 'Tap to see Security AI in action',
+    loopVideoSrc: '/assets/ai-demo/bureau-vertical-demo-video.mp4',
+    steps: SECURITY_STEPS,
   },
   {
     id: '3',
-    label: 'AI Demo — Screen 3',
+    label: 'AI Demo — Fraud',
     orientation: 'vertical',
-    ctaLabel: 'Tap to see Bureau AI in action',
-    loopVideoSrc: '/assets/ai-demo/screen-3-loop.mp4',
-    steps: DETECTIVE_STEPS,
+    ctaLabel: 'Tap to see Fraud AI in action',
+    loopVideoSrc: '/assets/ai-demo/bureau-vertical-demo-video.mp4',
+    steps: FRAUD_STEPS,
   },
   {
     id: '4',
-    label: 'AI Demo — Screen 4 (Horizontal)',
+    label: 'AI Demo — Monitor',
     orientation: 'horizontal',
-    ctaLabel: 'Tap to see Bureau AI in action',
-    loopVideoSrc: '/assets/ai-demo/screen-4-loop.mp4',
-    steps: DETECTIVE_STEPS,
+    ctaLabel: 'Tap to see Monitor AI in action',
+    loopVideoSrc: '/assets/ai-demo/bureau-vertical-demo-video.mp4',
+    steps: MONITOR_STEPS,
   },
 ];
 

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { LogoutConfirm } from '@/components/logout-confirm';
 import { useLocation } from 'wouter';
 import { Fingerprint, LogOut, Network, ScanFace, type LucideIcon } from 'lucide-react';
 import { Layout } from '@/components/layout';
@@ -65,7 +66,7 @@ const GAMES: {
     title: 'Spoof the System',
     desc: "Play Bureau's live challenge — opens in a new tab.",
     icon: ScanFace,
-    href: '/spoof-the-system',
+    href: '/beat-the-deepfake-system',
     tone: 'coral',
   },
   {
@@ -88,6 +89,21 @@ const GAMES: {
 export default function Home() {
   const [, setLocation] = useLocation();
   const { session, clearSession } = usePlayerSession();
+  const [mounted, setMounted] = useState(false);
+
+  // Mark mounted to avoid hydration mismatch, then enforce session
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !session) {
+      setLocation('/join', { replace: true });
+    }
+  }, [mounted, session, setLocation]);
+
+  // Don't render the hub if we're not logged in
+  if (!mounted || !session) return null;
 
   return (
     <Layout showHeader={false}>
@@ -126,13 +142,14 @@ export default function Home() {
         */}
       <footer className="flex shrink-0 items-center justify-between gap-3 py-2">
         {session ? (
-          <button
-            onClick={clearSession}
-            className="tap -ml-1 flex min-h-[44px] min-w-0 items-center gap-2 px-1 text-left font-mono text-eyebrow-micro uppercase tracking-[0.03em] text-[var(--text-on-dark-muted)]"
-          >
-            <LogOut className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="truncate">End session, {session.player.firstName}</span>
-          </button>
+          <LogoutConfirm>
+            <button
+              className="tap -ml-1 flex min-h-[44px] min-w-0 items-center gap-2 px-1 text-left font-mono text-eyebrow-micro uppercase tracking-[0.03em] text-[var(--text-on-dark-muted)]"
+            >
+              <LogOut className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              <span className="truncate">End session, {session.player.firstName}</span>
+            </button>
+          </LogoutConfirm>
         ) : (
           <span className="font-mono text-eyebrow-micro uppercase tracking-[0.03em] text-[var(--text-on-dark-faint)]">
             Bureau

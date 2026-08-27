@@ -18,6 +18,7 @@ import { StatReadout } from '@/components/bureau/stat-readout';
 import { IconTile } from '@/components/bureau/icon-tile';
 import { drawImageQuizOptions, type ImageQuizOption } from '@/data/image-quiz-pool';
 import { isDevTestMode } from '@/lib/dev-test-mode';
+import { useSyncState } from '@/hooks/useSyncState';
 
 
 // We shuffle options but keep track of their original 1-based index
@@ -112,6 +113,24 @@ export default function SpotTheFraud() {
       setTimeLeft(currentLevel.timerSec);
     }
   }, [gameState, levelIndex, currentLevel, questionPool]);
+
+  useSyncState({
+    type: gameState === 'playing' || gameState === 'explain' ? 'active' : 'idle',
+    game: 'spot_the_fraud',
+    gameState,
+    levelIndex,
+    currentLevel,
+    currentQuestion,
+    shuffledOptions,
+    imageOptions,
+    selectedIndices,
+    timeLeft,
+    score,
+    explainResult,
+    pointsEarned,
+    recoverySkipsRemaining
+  });
+
 
   // Timer logic
   useEffect(() => {

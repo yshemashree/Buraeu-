@@ -33,11 +33,34 @@ BureauInput.displayName = 'BureauInput';
 export default function Admin() {
   const [passcode, setPasscode] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleAuth = (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (passcode.length > 3) {
-      setAuthenticated(true);
+    if (passcode.length < 4) return;
+    
+    setAuthenticating(true);
+    setErrorMsg('');
+    
+    try {
+      const res = await fetch('/api/admin/stats', { 
+        headers: { 'x-admin-passcode': passcode } 
+      });
+      
+      if (res.status === 401) {
+        setErrorMsg('Incorrect operator passcode.');
+      } else if (res.status === 503) {
+        setErrorMsg('Host panel is not configured on the server.');
+      } else if (res.ok) {
+        setAuthenticated(true);
+      } else {
+        setErrorMsg('An unexpected error occurred.');
+      }
+    } catch (err) {
+      setErrorMsg('Connection failed.');
+    } finally {
+      setAuthenticating(false);
     }
   };
 
@@ -62,9 +85,15 @@ export default function Admin() {
                 value={passcode} 
                 onChange={e => setPasscode(e.target.value)}
                 className="text-center font-mono text-display-md tracking-widest"
+                disabled={authenticating}
               />
-              <Button type="submit" size="lg" chevron className="w-full">
-                Access
+              {errorMsg && (
+                <p className="text-center font-mono text-eyebrow-micro uppercase text-coral-600">
+                  {errorMsg}
+                </p>
+              )}
+              <Button type="submit" size="lg" chevron className="w-full" disabled={authenticating || passcode.length < 4}>
+                {authenticating ? 'Verifying...' : 'Access'}
               </Button>
             </form>
           </div>
@@ -84,7 +113,31 @@ function AdminDashboard({ passcode }: { passcode: string }) {
   const actionMutation = useRunAdminAction({ request: { headers: { 'x-admin-passcode': passcode } } });
   const { toast } = useToast();
 
-  const is503 = (statsError as any)?.response?.status === 503 || (leadsError as any)?.response?.status === 503;
+  const is401 = (statsError as any)?.response?.status === 401 || (leadsError as any)?.response?.status === 401 || (statsError as any)?.status === 401;
+  const is503 = (statsError as any)?.response?.status === 503 || (leadsError as any)?.response?.status === 503 || (statsError as any)?.status === 503;
+
+  if (is401) {
+    return (
+      <Layout showHeader={false}>
+        <div className="flex min-h-0 flex-1 flex-col justify-center">
+          <div className="w-full border border-coral-600 bg-ink-900 p-5">
+            <div className="mb-6 flex flex-col gap-4">
+              <div className="text-coral-600">
+                <IconTile icon={ShieldAlert} size={44} />
+              </div>
+              <div>
+                <h1 className="font-sans text-display-lg font-normal text-white">Access Denied</h1>
+                <p className="mt-2 text-body-md text-[var(--text-on-dark-muted)]">
+                  The passcode you entered is incorrect. Refresh the page to try again.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
   if (is503) {
     return (
       <Layout showHeader={false}>
@@ -173,7 +226,6 @@ function AdminDashboard({ passcode }: { passcode: string }) {
   }, [stats?.spoofLiveUrl, spoofUrlTouched]);
 
   const handleSaveSpoofUrl = () => {
-    if (!spoofUrlDraft.trim()) return;
     actionMutation.mutate({ data: { action: 'set_spoof_url', value: spoofUrlDraft.trim() } }, {
       onSuccess: () => { toast({ title: "Live URL saved" }); refetchStats(); },
       onError: (err: any) => toast({ title: "Could not save URL", description: err?.data?.error, variant: "destructive" }),
@@ -271,7 +323,7 @@ function AdminDashboard({ passcode }: { passcode: string }) {
                 variant="dark"
                 size="sm"
                 onClick={handleSaveSpoofUrl}
-                disabled={!spoofUrlDraft.trim() || actionMutation.isPending}
+                disabled={actionMutation.isPending}
                 className="self-start"
               >
                 Save URL
@@ -295,6 +347,40 @@ function AdminDashboard({ passcode }: { passcode: string }) {
               <h3 className="font-mono text-eyebrow font-medium uppercase tracking-[0.03em] text-russian">Controls</h3>
             </div>
             <div className="flex flex-col">
+              <ControlRow 
+                title="Global Leaderboard" 
+                desc="When disabled, screens skip the live ranking and waitlist gates."
+              >
+                <Button 
+                  variant={stats?.enableLeaderboard ? "outline" : "dark"} 
+                  size="sm" 
+                  onClick={() => {
+                    actionMutation.mutate({ data: { action: 'set_leaderboard_enabled', value: stats?.enableLeaderboard ? 'false' : 'true' } }, {
+                      onSuccess: () => { toast({ title: `Leaderboard ${stats?.enableLeaderboard ? 'disabled' : 'enabled'}` }); refetchStats(); }
+                    });
+                  }}
+                >
+                  {stats?.enableLeaderboard ? "Disable Leaderboard" : "Enable Leaderboard"}
+                </Button>
+              </ControlRow>
+              
+              <ControlRow 
+                title="Waitlist Mode" 
+                desc="Toggle whether to collect waitlist emails for unreleased features."
+              >
+                <Button 
+                  variant={stats?.enableWaitlist ? "outline" : "dark"} 
+                  size="sm" 
+                  onClick={() => {
+                    actionMutation.mutate({ data: { action: 'set_waitlist_enabled', value: stats?.enableWaitlist ? 'false' : 'true' } }, {
+                      onSuccess: () => { toast({ title: `Waitlist ${stats?.enableWaitlist ? 'disabled' : 'enabled'}` }); refetchStats(); }
+                    });
+                  }}
+                >
+                  {stats?.enableWaitlist ? "Disable Waitlist" : "Enable Waitlist"}
+                </Button>
+              </ControlRow>
+
               <ControlRow 
                 title="Demo Rows" 
                 desc={`${stats?.demoRowCount || 0} rows seeded on leaderboard`}

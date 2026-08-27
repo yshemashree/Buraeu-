@@ -23,4 +23,7 @@ export const SETTING_SIX_DEGREES_CAUTION_ACK = "six_degrees_caution_ack";
  */
 export const SETTING_SPOOF_LIVE_URL = "spoof_live_url";
 
+export const SETTING_ENABLE_LEADERBOARD = "enable_leaderboard";
+export const SETTING_ENABLE_WAITLIST = "enable_waitlist";
+
 export type AppSetting = typeof appSettingsTable.$inferSelect;

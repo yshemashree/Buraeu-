@@ -14,6 +14,9 @@
  */
 import { useEffect, useState } from 'react';
 import { useGetLeaderboard, getGetLeaderboardQueryKey } from '@shared/api-client-react';
+import { useSyncStream } from '@/hooks/useSyncStream';
+import { SpotTheFraudSpectator } from '@/components/spectator-spot';
+import { FraudDetectiveSpectator } from '@/components/spectator-detective';
 
 const LED_WIDTH = 504;
 const LED_HEIGHT = 840;
@@ -23,13 +26,17 @@ type Slide = 'attract' | 'leaderboard';
 
 export default function LedDisplay() {
   const [slide, setSlide] = useState<Slide>('attract');
+  const syncState = useSyncStream();
 
   useEffect(() => {
+    // Suspend rotation if a game is actively playing
+    if (syncState.type === 'active') return;
+
     const timer = window.setInterval(() => {
       setSlide((s) => (s === 'attract' ? 'leaderboard' : 'attract'));
     }, ROTATE_MS);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [syncState.type]);
 
   const leaderboardParams = { scope: 'today' as const, limit: 8 };
   const { data: leaderboard } = useGetLeaderboard(leaderboardParams, {
@@ -51,9 +58,26 @@ export default function LedDisplay() {
         }}
         className="relative shrink-0 overflow-hidden bg-[#00010f]"
       >
-        <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
-
-        {slide === 'attract' ? <AttractSlide /> : <LeaderboardSlide rows={leaderboard?.rows ?? []} />}
+        {syncState.type === 'active' ? (
+          syncState.game === 'spot_the_fraud' ? (
+            <SpotTheFraudSpectator state={syncState} />
+          ) : syncState.game === 'fraud_detective' ? (
+            <FraudDetectiveSpectator state={syncState} />
+          ) : null
+        ) : syncState.type === 'registering' ? (
+          <div className="flex h-full w-full flex-col items-center justify-center gap-6 px-8 text-center bg-[#00010f]">
+            <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
+            <div className="relative z-10 size-16 animate-spin rounded-full border-4 border-violet-500/20 border-t-violet-500" />
+            <span className="relative z-10 font-mono text-[24px] font-medium uppercase tracking-[0.2em] text-violet-400">
+              Registering...
+            </span>
+          </div>
+        ) : (
+          <>
+            <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
+            {slide === 'attract' ? <AttractSlide /> : <LeaderboardSlide rows={leaderboard?.rows ?? []} />}
+          </>
+        )}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import {
   useGetLeaderboard,
   LeaderboardScope,
@@ -31,8 +32,20 @@ const TABS: { key: Tab; label: string }[] = [
  */
 export default function LeaderboardPage() {
   const { session } = usePlayerSession();
+  const [, setLocation] = useLocation();
   const [scope, setScope] = useState<LeaderboardScope>('today');
   const [activeTab, setActiveTab] = useState<Tab>('combined');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !session) {
+      setLocation('/join', { replace: true });
+    }
+  }, [mounted, session, setLocation]);
 
   const leaderboardParams = {
     scope,
@@ -45,8 +58,12 @@ export default function LeaderboardPage() {
     query: {
       refetchInterval: 10000,
       queryKey: getGetLeaderboardQueryKey(leaderboardParams),
+      enabled: mounted && !!session,
     },
   });
+
+  // Don't render the leaderboard if we're not logged in
+  if (!mounted || !session) return null;
 
   const rows = leaderboard?.rows ?? [];
   const showPinned =

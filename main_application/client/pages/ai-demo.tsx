@@ -12,17 +12,19 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'wouter';
-import { getDemoScreen, type DemoStep } from '@/data/ai-demo-content';
+import { getDemoScreen, DEMO_SCREENS, type DemoStep, type DemoScreenConfig } from '@/data/ai-demo-content';
 
-const INACTIVITY_MS = 45_000;
+const INACTIVITY_MS = 20_000;
 
 type ScreenState = 'loop' | 'demo';
 
 export default function AiDemo() {
   const { screenId } = useParams<{ screenId: string }>();
-  const config = getDemoScreen(screenId);
+  // Use the specific screen's background video if available, otherwise fallback to the first one.
+  const baseConfig = getDemoScreen(screenId) || DEMO_SCREENS[0];
 
   const [state, setState] = useState<ScreenState>('loop');
+  const [activeDemo, setActiveDemo] = useState<DemoScreenConfig | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [videoFailed, setVideoFailed] = useState(false);
   const inactivityTimer = useRef<number | null>(null);
@@ -30,6 +32,7 @@ export default function AiDemo() {
   const returnToLoop = () => {
     setState('loop');
     setStepIndex(0);
+    setActiveDemo(null);
   };
 
   const armInactivityTimer = () => {
@@ -37,23 +40,25 @@ export default function AiDemo() {
     inactivityTimer.current = window.setTimeout(returnToLoop, INACTIVITY_MS);
   };
 
-  const startDemo = () => {
+  const startDemo = (demo: DemoScreenConfig) => {
+    setActiveDemo(demo);
     setStepIndex(0);
     setState('demo');
+    armInactivityTimer();
   };
 
   // Auto-advance through the scripted steps while the demo is running.
   useEffect(() => {
-    if (state !== 'demo' || !config) return;
+    if (state !== 'demo' || !activeDemo) return;
     armInactivityTimer();
 
-    const step = config.steps[stepIndex];
+    const step = activeDemo.steps[stepIndex];
     if (!step) {
       returnToLoop();
       return;
     }
     const timer = window.setTimeout(() => {
-      if (stepIndex + 1 >= config.steps.length) {
+      if (stepIndex + 1 >= activeDemo.steps.length) {
         returnToLoop();
       } else {
         setStepIndex((i) => i + 1);
@@ -62,30 +67,22 @@ export default function AiDemo() {
 
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, stepIndex, config]);
+  }, [state, stepIndex, activeDemo]);
 
   useEffect(() => () => {
     if (inactivityTimer.current) window.clearTimeout(inactivityTimer.current);
   }, []);
 
-  if (!config) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-black text-white">
-        <p className="font-mono text-sm uppercase tracking-[0.05em]">Unknown demo screen. Use /ai-demo/1 through /ai-demo/4.</p>
-      </div>
-    );
-  }
-
   return (
     <div
       className="relative h-screen w-full overflow-hidden bg-black"
-      data-orientation={config.orientation}
-      onClick={() => (state === 'demo' ? armInactivityTimer() : startDemo())}
+      data-orientation={baseConfig.orientation}
+      onClick={() => { if (state === 'demo') armInactivityTimer(); }}
     >
       {!videoFailed ? (
         <video
           className="absolute inset-0 size-full object-cover"
-          src={config.loopVideoSrc}
+          src={baseConfig.loopVideoSrc}
           autoPlay
           loop
           muted
@@ -95,22 +92,32 @@ export default function AiDemo() {
       ) : (
         <div className="absolute inset-0 bureau-matrix bg-[#00010f]" />
       )}
-      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/40" />
+      <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/60" />
 
       {state === 'loop' && (
-        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end gap-6 p-10 text-center">
-          <h1 className="font-sans text-[clamp(28px,4vw,48px)] font-normal text-white">Bureau AI Demo</h1>
-          <button
-            type="button"
-            onClick={startDemo}
-            className="tap border border-violet-500 bg-violet-700/90 px-8 py-4 font-mono text-[clamp(14px,1.6vw,20px)] uppercase tracking-[0.08em] text-white"
-          >
-            {config.ctaLabel}
-          </button>
+        <div className="relative z-10 flex h-full w-full flex-col items-center justify-end gap-6 p-10 pb-20 text-center">
+          <h1 className="font-sans text-[clamp(24px,3vw,36px)] font-normal text-white mb-2">Explore Bureau AI</h1>
+          <div className="grid w-full max-w-2xl grid-cols-1 sm:grid-cols-2 gap-4">
+            {DEMO_SCREENS.map((demo) => (
+              <button
+                key={demo.id}
+                type="button"
+                onClick={() => startDemo(demo)}
+                className="tap flex min-h-[80px] flex-col justify-center items-center gap-1 border border-violet-500/50 bg-violet-700/80 hover:bg-violet-600 px-6 py-4 backdrop-blur-md transition-colors"
+              >
+                <span className="font-sans text-[clamp(18px,2vw,24px)] font-medium text-white">
+                  {demo.label.replace('AI Demo — ', '')}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-violet-200">
+                  Tap to play
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {state === 'demo' && <DemoOverlay step={config.steps[stepIndex]} />}
+      {state === 'demo' && activeDemo && <DemoOverlay step={activeDemo.steps[stepIndex]} />}
     </div>
   );
 }

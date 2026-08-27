@@ -2,6 +2,7 @@ import { usePlayerSession } from '@/lib/store';
 import { ChevronLeft, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
+import { LogoutConfirm } from '@/components/logout-confirm';
 
 /**
  * The phone shell.
@@ -37,7 +38,7 @@ export function Layout({
   /** Escape hatch from the no-scroll rule. The admin panel is the only user. */
   scrollable?: boolean;
 }) {
-  const { session, clearSession } = usePlayerSession();
+  const { session } = usePlayerSession();
   const [location, setLocation] = useLocation();
 
   const handleBack = () => {
@@ -87,16 +88,14 @@ export function Layout({
               {headerRight ?? null}
 
               {!headerRight && session ? (
-                <button
-                  onClick={() => {
-                    clearSession();
-                    setLocation('/');
-                  }}
-                  aria-label="End session"
-                  className="tap flex size-11 shrink-0 items-center justify-center text-[var(--text-on-dark-muted)]"
-                >
-                  <LogOut className="size-[18px]" strokeWidth={1.5} />
-                </button>
+                <LogoutConfirm>
+                  <button
+                    aria-label="End session"
+                    className="tap flex size-11 shrink-0 items-center justify-center text-[var(--text-on-dark-muted)]"
+                  >
+                    <LogOut className="size-5" strokeWidth={1.5} />
+                  </button>
+                </LogoutConfirm>
               ) : null}
             </div>
             <hr className="h-px w-full border-0 bg-ink-800" />

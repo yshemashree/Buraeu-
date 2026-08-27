@@ -280,6 +280,8 @@ export interface AdminStats {
    * @nullable
    */
   spoofLiveUrl?: string | null;
+  enableLeaderboard?: boolean;
+  enableWaitlist?: boolean;
 }
 
 export interface AdminLead {
@@ -344,6 +346,8 @@ export const AdminActionInputAction = {
   delete_upload: 'delete_upload',
   acknowledge_six_degrees_caution: 'acknowledge_six_degrees_caution',
   set_spoof_url: 'set_spoof_url',
+  set_leaderboard_enabled: 'set_leaderboard_enabled',
+  set_waitlist_enabled: 'set_waitlist_enabled',
 } as const;
 
 export interface AdminActionInput {
