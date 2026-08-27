@@ -11,6 +11,7 @@ import { usePlayerSession } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { PrimaryNav } from '@/components/bureau/primary-nav';
 import { ArenaHeader } from '@/components/bureau/arena-header';
+import { useSyncState } from '@/hooks/useSyncState';
 
 type Tab = 'combined' | GameKey;
 
@@ -30,12 +31,27 @@ const TABS: { key: Tab; label: string }[] = [
  * self-row is the most the API returns, which lands comfortably above the 44px
  * floor on the shortest handset we target.
  */
-export default function LeaderboardPage() {
+export default function LeaderboardPage({
+  syncedScope,
+  syncedTab,
+}: {
+  syncedScope?: LeaderboardScope;
+  syncedTab?: Tab;
+} = {}) {
   const { session } = usePlayerSession();
   const [, setLocation] = useLocation();
   const [scope, setScope] = useState<LeaderboardScope>('today');
   const [activeTab, setActiveTab] = useState<Tab>('combined');
   const [mounted, setMounted] = useState(false);
+
+  const currentScope = syncedScope ?? scope;
+  const currentTab = syncedTab ?? activeTab;
+
+  useSyncState({
+    type: 'leaderboard_page',
+    scope: currentScope,
+    activeTab: currentTab,
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -48,8 +64,8 @@ export default function LeaderboardPage() {
   }, [mounted, session, setLocation]);
 
   const leaderboardParams = {
-    scope,
-    game: activeTab === 'combined' ? undefined : activeTab,
+    scope: currentScope,
+    game: currentTab === 'combined' ? undefined : currentTab,
     limit: 10,
     playerId: session?.player.id,
   };
@@ -82,7 +98,7 @@ export default function LeaderboardPage() {
             onClick={() => setScope(s)}
             className={cn(
               'tap flex-1 py-2.5 font-mono text-eyebrow-micro font-medium uppercase tracking-[0.03em]',
-              scope === s ? 'bg-violet-700 text-white' : 'text-[var(--text-on-dark-muted)]',
+              currentScope === s ? 'bg-violet-700 text-white' : 'text-[var(--text-on-dark-muted)]',
             )}
           >
             {s === 'today' ? 'Today' : 'All days'}
@@ -98,7 +114,7 @@ export default function LeaderboardPage() {
             onClick={() => setActiveTab(t.key)}
             className={cn(
               'tap flex-1 border-b-2 py-3 font-mono text-eyebrow-micro font-medium uppercase tracking-[0.03em]',
-              activeTab === t.key
+              currentTab === t.key
                 ? 'border-violet-700 text-white'
                 : 'border-transparent text-[var(--text-on-dark-muted)]',
             )}
@@ -115,6 +131,7 @@ export default function LeaderboardPage() {
             key={row.playerId}
             row={row}
             isCurrentUser={row.playerId === session?.player.id}
+            activeTab={currentTab}
           />
         ))}
 
@@ -128,20 +145,25 @@ export default function LeaderboardPage() {
         )}
 
         {showPinned && leaderboard?.pinned && (
-          <LeaderboardRow row={leaderboard.pinned} isCurrentUser />
+          <LeaderboardRow row={leaderboard.pinned} isCurrentUser activeTab={currentTab} />
         )}
       </div>
 
       <div className="shrink-0 py-2">
         <span className="font-mono text-eyebrow-micro uppercase tracking-[0.03em] text-[var(--text-on-dark-faint)]">
-          {scope === 'today' ? 'Today at the booth' : 'All days'}
+          {currentScope === 'today' ? 'Today at the booth' : 'All days'}
         </span>
       </div>
     </Layout>
   );
 }
 
-function LeaderboardRow({ row, isCurrentUser }: { row: any; isCurrentUser: boolean }) {
+function LeaderboardRow({ row, isCurrentUser, activeTab }: { row: any; isCurrentUser: boolean, activeTab?: Tab }) {
+  const displayScore = activeTab === 'spot_the_fraud' ? row.spotTheFraud 
+                     : activeTab === 'spoof_the_system' ? row.spoofTheSystem 
+                     : activeTab === 'fraud_detective' ? row.fraudDetective
+                     : row.total;
+
   return (
     <div
       className={cn(
@@ -183,7 +205,7 @@ function LeaderboardRow({ row, isCurrentUser }: { row: any; isCurrentUser: boole
           row.rank <= 3 ? 'text-violet-700' : 'text-russian',
         )}
       >
-        {row.total}
+        {displayScore}
       </span>
     </div>
   );

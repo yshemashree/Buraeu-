@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Layout } from '@/components/layout';
 import { EyebrowTag } from '@/components/bureau/eyebrow-tag';
 import { cn } from '@/lib/utils';
+import { useSyncState } from '@/hooks/useSyncState';
 
 interface Props {
   firstName: string;
@@ -22,6 +23,12 @@ interface Props {
 }
 
 export function PlayerGate({ firstName, company, gameName, onContinue, onNewPlayer }: Props) {
+  useSyncState({ 
+    type: 'gate', 
+    gameName, 
+    session: { player: { firstName, company } } 
+  });
+
   return (
     <Layout title="Who's playing?" back="/">
       <div className="flex min-h-0 flex-1 flex-col">

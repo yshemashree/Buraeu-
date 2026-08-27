@@ -1,9 +1,15 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useContext } from "react";
+import { DisplayContext } from "@/components/layout";
+
+let activeSyncCount = 0;
 
 export function useSyncState(state: any) {
   const lastSentRef = useRef<string>("");
+  const { isLed } = useContext(DisplayContext);
 
   useEffect(() => {
+    if (isLed) return;
+
     // Stringify to compare deeply enough for our simple states
     const stateStr = JSON.stringify(state);
     if (stateStr === lastSentRef.current) return;
@@ -19,20 +25,30 @@ export function useSyncState(state: any) {
     }).catch((err) => {
       console.warn("Failed to sync state to spectator:", err);
     });
-  }, [state]);
+  }, [state, isLed]);
 
-  // Only send idle when the component actually unmounts
+  // Only send idle when the component actually unmounts and no other sync hook is active
   useEffect(() => {
+    if (isLed) return;
+    activeSyncCount++;
+
     return () => {
-      fetch("/api/sync/state", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ type: "idle" }),
-        keepalive: true
-      }).catch(() => {});
+      activeSyncCount--;
+      if (activeSyncCount === 0) {
+        setTimeout(() => {
+          if (activeSyncCount === 0) {
+            fetch("/api/sync/state", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ type: "idle" }),
+              keepalive: true
+            }).catch(() => {});
+          }
+        }, 100);
+      }
     };
-  }, []);
+  }, [isLed]);
 }
 

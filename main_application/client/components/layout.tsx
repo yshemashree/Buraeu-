@@ -3,6 +3,12 @@ import { ChevronLeft, LogOut } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '@/lib/utils';
 import { LogoutConfirm } from '@/components/logout-confirm';
+import { createContext, useContext } from 'react';
+
+export const DisplayContext = createContext<{ 
+  isLed?: boolean;
+  overrideLocation?: string;
+}>({});
 
 /**
  * The phone shell.
@@ -40,6 +46,7 @@ export function Layout({
 }) {
   const { session } = usePlayerSession();
   const [location, setLocation] = useLocation();
+  const { isLed } = useContext(DisplayContext);
 
   const handleBack = () => {
     if (typeof back === 'function') back();
@@ -47,9 +54,9 @@ export function Layout({
   };
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#00010f] sm:items-center sm:justify-center">
+    <div className={cn("flex w-full overflow-hidden bg-[#00010f]", isLed ? "h-full" : "h-[100dvh] sm:items-center sm:justify-center")}>
       <div
-        className="app-shell relative flex h-[100dvh] w-full flex-col bg-russian sm:h-[min(100dvh,716px)] sm:max-w-[430px] sm:border-x sm:border-ink-800"
+        className={cn("app-shell relative flex w-full flex-col bg-russian", isLed ? "!h-full !max-h-full" : "h-[100dvh] sm:h-[min(100dvh,716px)] sm:max-w-[430px] sm:border-x sm:border-ink-800")}
       >
         {/* The matrix sits behind every dark field, fading out under content. */}
         <div

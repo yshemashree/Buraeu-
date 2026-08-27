@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'wouter';
 import { LayoutGrid, Trophy, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useContext } from 'react';
+import { DisplayContext } from '@/components/layout';
 
 /**
  * The primary navigation.
@@ -27,6 +29,8 @@ const ITEMS: NavItem[] = [
 
 export function PrimaryNav({ className }: { className?: string }) {
   const [location] = useLocation();
+  const { overrideLocation } = useContext(DisplayContext);
+  const currentPath = overrideLocation ?? location;
 
   return (
     <nav
@@ -34,7 +38,7 @@ export function PrimaryNav({ className }: { className?: string }) {
       className={cn('flex w-full shrink-0 border-b border-ink-800', className)}
     >
       {ITEMS.map((item) => {
-        const active = item.href === '/' ? location === '/' : location.startsWith(item.href);
+        const active = item.href === '/' ? currentPath === '/' : currentPath.startsWith(item.href);
         const Icon = item.icon;
 
         return (

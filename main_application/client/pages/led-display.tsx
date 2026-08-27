@@ -17,7 +17,18 @@ import { useGetLeaderboard, getGetLeaderboardQueryKey } from '@shared/api-client
 import { useSyncStream } from '@/hooks/useSyncStream';
 import { SpotTheFraudSpectator } from '@/components/spectator-spot';
 import { FraudDetectiveSpectator } from '@/components/spectator-detective';
-
+import { LifelineSpectator } from '@/components/spectator-lifeline';
+import { usePlayerSession } from '@/lib/store';
+import Home from '@/pages/home';
+import { PlayerGate } from '@/components/player-gate';
+import { DisplayContext, Layout, ScreenBody } from '@/components/layout';
+import { RulesScreen } from '@/components/rules-screen';
+import { EyebrowTag } from '@/components/bureau/eyebrow-tag';
+import { Button } from '@/components/ui/button';
+import { Wifi, ExternalLink, ShieldAlert } from 'lucide-react';
+import { IconTile } from '@/components/bureau/icon-tile';
+import LeaderboardPage from '@/pages/leaderboard';
+import { GameEndScreen } from '@/components/game-end-screen';
 const LED_WIDTH = 504;
 const LED_HEIGHT = 840;
 const ROTATE_MS = 9000;
@@ -27,6 +38,7 @@ type Slide = 'attract' | 'leaderboard';
 export default function LedDisplay() {
   const [slide, setSlide] = useState<Slide>('attract');
   const syncState = useSyncStream();
+  const { session, saveSession, clearSession } = usePlayerSession();
 
   useEffect(() => {
     // Suspend rotation if a game is actively playing
@@ -46,6 +58,17 @@ export default function LedDisplay() {
     },
   });
 
+  // Sync the LED display's session to match the tablet
+  useEffect(() => {
+    if (syncState.session && syncState.session.player) {
+      if (!session || session.player.firstName !== syncState.session.player.firstName) {
+        saveSession(syncState.session);
+      }
+    } else if (syncState.type === 'landing') {
+      if (session) clearSession();
+    }
+  }, [syncState, session, saveSession, clearSession]);
+
   return (
     <div className="fixed inset-0 flex items-center justify-center overflow-hidden bg-black">
       <div
@@ -58,26 +81,141 @@ export default function LedDisplay() {
         }}
         className="relative shrink-0 overflow-hidden bg-[#00010f]"
       >
-        {syncState.type === 'active' ? (
-          syncState.game === 'spot_the_fraud' ? (
-            <SpotTheFraudSpectator state={syncState} />
-          ) : syncState.game === 'fraud_detective' ? (
-            <FraudDetectiveSpectator state={syncState} />
-          ) : null
-        ) : syncState.type === 'registering' ? (
-          <div className="flex h-full w-full flex-col items-center justify-center gap-6 px-8 text-center bg-[#00010f]">
-            <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
-            <div className="relative z-10 size-16 animate-spin rounded-full border-4 border-violet-500/20 border-t-violet-500" />
-            <span className="relative z-10 font-mono text-[24px] font-medium uppercase tracking-[0.2em] text-violet-400">
-              Registering...
-            </span>
-          </div>
-        ) : (
-          <>
-            <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
-            {slide === 'attract' ? <AttractSlide /> : <LeaderboardSlide rows={leaderboard?.rows ?? []} />}
-          </>
-        )}
+        <DisplayContext.Provider value={{ isLed: true, overrideLocation: syncState.type === 'hub' ? '/' : syncState.type === 'leaderboard_page' ? '/leaderboard' : undefined }}>
+          {syncState.type === 'active' ? (
+            syncState.gameState === 'lifeline' ? (
+              <LifelineSpectator state={syncState} />
+            ) : syncState.game === 'spot_the_fraud' ? (
+              <SpotTheFraudSpectator state={syncState} />
+            ) : syncState.game === 'fraud_detective' ? (
+              <FraudDetectiveSpectator state={syncState} />
+            ) : null
+          ) : syncState.type === 'highscore' ? (
+            <GameEndScreen
+              currentGame={syncState.game}
+              points={syncState.finalResult?.pointsRecorded ?? syncState.score}
+              standing={syncState.finalResult?.standing}
+              isPersonalBest={syncState.finalResult?.isPersonalBest}
+              highScore
+            />
+          ) : syncState.type === 'registering' ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-6 px-8 text-center bg-[#00010f]">
+              <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
+              <div className="relative z-10 size-16 animate-spin rounded-full border-4 border-violet-500/20 border-t-violet-500" />
+              <span className="relative z-10 font-mono text-[24px] font-medium uppercase tracking-[0.2em] text-violet-400">
+                Registering...
+              </span>
+            </div>
+          ) : syncState.type === 'hub' ? (
+            <Home />
+          ) : syncState.type === 'leaderboard_page' ? (
+            <LeaderboardPage syncedScope={syncState.scope} syncedTab={syncState.activeTab} />
+          ) : syncState.type === 'gate' ? (
+            <PlayerGate 
+              firstName={syncState.session?.player?.firstName || ''} 
+              company={syncState.session?.player?.company || ''} 
+              gameName={syncState.gameName || ''} 
+              onContinue={() => {}} 
+              onNewPlayer={() => {}} 
+            />
+          ) : syncState.type === 'rules' && syncState.rulesProps ? (
+            <Layout title={syncState.rulesProps.gameName} back="/">
+              <RulesScreen {...syncState.rulesProps} onStart={() => {}} />
+            </Layout>
+          ) : syncState.type === 'rules_custom' && syncState.game === 'spoof_the_system' ? (
+            syncState.screenState === 'not_configured' ? (
+              <Layout title="Spoof the System" back="/">
+                <ScreenBody>
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 text-center">
+                    <IconTile icon={ShieldAlert} size={60} />
+                    <h1 className="mt-6 font-sans text-display-xl font-normal text-white">Not set up yet</h1>
+                    <p className="mt-3 max-w-[32ch] text-body-lg text-[var(--text-on-dark-muted)]">
+                      The host hasn't configured the live link for this game. Ask a Bureau team member to set it in the Admin Panel.
+                    </p>
+                  </div>
+                  <div className="mt-auto shrink-0 py-4">
+                    <Button size="lg" variant="outline" className="w-full pointer-events-none">
+                      Back to Arena
+                    </Button>
+                  </div>
+                </ScreenBody>
+              </Layout>
+            ) : syncState.screenState === 'opened' ? (
+              <Layout title="Spoof the System" back="/">
+                <ScreenBody>
+                  <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 text-center">
+                    <IconTile icon={ExternalLink} size={60} />
+                    <h1 className="mt-6 font-sans text-display-xl font-normal text-white">Opened in a new tab</h1>
+                    <p className="mt-3 max-w-[32ch] text-body-lg text-[var(--text-on-dark-muted)]">
+                      Spoof the System runs on Bureau's live platform. If it didn't open, use the button below.
+                    </p>
+                  </div>
+                  <div className="mt-auto flex shrink-0 flex-col gap-3 py-4">
+                    <Button size="lg" variant="light" chevron className="w-full pointer-events-none">
+                      Open again
+                    </Button>
+                    <Button size="lg" variant="outline" className="w-full pointer-events-none">
+                      Back to Arena
+                    </Button>
+                  </div>
+                </ScreenBody>
+              </Layout>
+            ) : (
+              <Layout title="Spoof the System" back="/">
+                  <div className="flex min-h-0 flex-1 flex-col pt-4 pb-6">
+                    <div className="shrink-0">
+                      <EyebrowTag>Briefing</EyebrowTag>
+                      <h1 className="mt-3 font-sans text-display-lg font-normal text-white">Spoof the System</h1>
+                      <p className="mt-2 text-body-md text-[var(--text-on-dark-muted)]">
+                        This game runs on Bureau's live platform, outside this app. Tap below to open it — you'll need an internet connection for this one game only.
+                      </p>
+                    </div>
+
+                    <div className="stagger-in mt-4 min-h-0 flex-1 overflow-y-auto border-t border-ink-800">
+                      <div className="flex items-start gap-3 border-b border-ink-800 py-3">
+                        <Wifi className="mt-0.5 size-5 shrink-0 text-violet-500" strokeWidth={1.5} />
+                        <div className="min-w-0">
+                          <h2 className="font-mono text-eyebrow-micro font-medium uppercase tracking-[0.03em] text-white">
+                            Online only
+                          </h2>
+                          <p className="mt-1 text-body-sm text-[var(--text-on-dark-muted)]">
+                            Every other game in the Arena works fully offline. This is the one exception.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3 border-b border-ink-800 py-3">
+                        <ExternalLink className="mt-0.5 size-5 shrink-0 text-violet-500" strokeWidth={1.5} />
+                        <div className="min-w-0">
+                          <h2 className="font-mono text-eyebrow-micro font-medium uppercase tracking-[0.03em] text-white">
+                            Opens in a new tab
+                          </h2>
+                          <p className="mt-1 text-body-sm text-[var(--text-on-dark-muted)]">
+                            Your Arena session stays open here — come back for the other games any time.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 pt-4">
+                      <Button variant="light" size="lg" chevron className="w-full pointer-events-none">
+                        Open Spoof the System
+                      </Button>
+                    </div>
+                  </div>
+                </Layout>
+            )
+          ) : syncState.type === 'landing' ? (
+            <>
+              <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
+              <LeaderboardSlide rows={leaderboard?.rows ?? []} />
+            </>
+          ) : (
+            <>
+              <div aria-hidden className="bureau-matrix pointer-events-none absolute inset-0 opacity-60" />
+              {slide === 'attract' ? <AttractSlide /> : <LeaderboardSlide rows={leaderboard?.rows ?? []} />}
+            </>
+          )}
+        </DisplayContext.Provider>
       </div>
     </div>
   );

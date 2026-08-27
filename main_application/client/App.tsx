@@ -148,7 +148,9 @@ function Router() {
       <Route path="/fraud-detective">
         {() => <ProtectedRoute component={FraudDetective} path="/fraud-detective" />}
       </Route>
-      <Route path="/leaderboard" component={Leaderboard} />
+      <Route path="/leaderboard">
+        {() => <Leaderboard />}
+      </Route>
       <Route path="/admin" component={Admin} />
       <Route path="/led" component={LedDisplay} />
       <Route path="/ai-demo/:screenId" component={AiDemo} />

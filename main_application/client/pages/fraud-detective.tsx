@@ -8,10 +8,20 @@ import { RetryOptions } from '@/components/retry-options';
 import { GameEndScreen } from '@/components/game-end-screen';
 import { useSubmitRun, useSaveRunProgress, useGetPlayerStanding, RunInput } from '@shared/api-client-react';
 import { CASES, PRIMER, BONUS, type DetectiveCase } from '@/data/detective';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LifelineGate } from '@/components/lifeline-gate';
 import { fetchDetectiveCasePack, fetchLifelineQuestion, type LifelineQuestion } from '@/lib/gamePack';
 import { v4 as uuidv4 } from 'uuid';
-import { Maximize, Minimize2, AlertCircle, Fingerprint, CheckCircle2, ShieldAlert, Target } from 'lucide-react';
+import { Maximize, Minimize2, AlertCircle, Fingerprint, CheckCircle2, ShieldAlert, Target, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import * as d3 from 'd3-force';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -76,7 +86,8 @@ export default function FraudDetective() {
   const [caseFailSec, setCaseFailSec] = useState(10);
   const [caseClosedSec, setCaseClosedSec] = useState(5);
   const [caseFailTab, setCaseFailTab] = useState<'graph' | 'why'>('graph');
-  const [isGraphExpanded, setIsGraphExpanded] = useState(false);
+  const [showClues, setShowClues] = useState(false);
+  const [showEndGameDialog, setShowEndGameDialog] = useState(false);
 
   // Current case state
   const currentCase = activeCases[caseIndex];
@@ -150,24 +161,6 @@ export default function FraudDetective() {
     }
   }, [gameState, caseIndex, currentCase]);
 
-  useSyncState({
-    type: gameState === 'case' || gameState === 'casefail' ? 'active' : 'idle',
-    game: 'fraud_detective',
-    gameState,
-    caseIndex,
-    currentCase,
-    graphNodes,
-    graphEdges,
-    selectedNode,
-    caseTimeLeft,
-    caseScore,
-    bonusScore,
-    solved,
-    revealed,
-    recoverySkipsRemaining,
-    caseFailCanAdvance
-  });
-
 
   const resetCaseTimer = () => {
     setCaseTimeLeft(CASE_TIMER_SECONDS);
@@ -211,7 +204,7 @@ export default function FraudDetective() {
   }, [caseTimeLeft, gameState, solved, revealed, currentCase, wrongGuesses, recoverySkipsRemaining]);
 
   useEffect(() => {
-    setIsGraphExpanded(false);
+    setShowClues(false);
   }, [gameState, caseIndex]);
 
   /**
@@ -410,9 +403,10 @@ export default function FraudDetective() {
   const lastPayloadRef = useRef<RunInput | null>(null);
   const [lifelineQuestion, setLifelineQuestion] = useState<LifelineQuestion | null>(null);
   const [lifelineContext, setLifelineContext] = useState<'gameover' | 'reentry'>('gameover');
+  const [lifelineState, setLifelineState] = useState<any>(null);
   const reentryChecked = useRef(false);
 
-  const endRun = () => {
+  const endRun = (isEarlyExit: boolean = false) => {
     const correctCaseCount = caseResults.filter(
       (result) => result.points > 0 && !result.revealed
     ).length;
@@ -447,7 +441,7 @@ export default function FraudDetective() {
       submitRun.mutate({ data: payload }, {
         onSuccess: (res) => {
           setFinalResult(res);
-          setGameState(completedPerfectly ? 'highscore' : 'lifeline');
+          setGameState(completedPerfectly || isEarlyExit ? 'highscore' : 'lifeline');
         },
         onError: () => {
           setGameState('error');
@@ -455,7 +449,7 @@ export default function FraudDetective() {
       });
     } else {
       setFinalResult({ pointsRecorded: caseScore + bonusScore + milestoneBonus, isPersonalBest: false, standing: { rank: 0, behind: 0 } });
-      setGameState(completedPerfectly ? 'highscore' : 'lifeline');
+      setGameState(completedPerfectly || isEarlyExit ? 'highscore' : 'lifeline');
     }
   };
 
@@ -511,23 +505,86 @@ export default function FraudDetective() {
     return () => clearTimeout(t);
   }, [caseFailSec, gameState, caseFailCanAdvance]);
 
+  useSyncState({
+    type: gameState === 'rules' ? 'rules' : gameState === 'highscore' ? 'highscore' : gameState === 'case' || gameState === 'casefail' || gameState === 'lifeline' ? 'active' : 'idle',
+    game: 'fraud_detective',
+    rulesProps: gameState === 'rules' ? {
+      gameName: "Fraud Detective",
+      premise: "Five graph investigation cases. Find the hidden links that expose the rings.",
+      scoring: "Up to 100 points - 15 points per case, 10 for 3+ correct and 15 for all 5 correct.",
+      endsWhen: "A wrong accusation ends your run after 2 skips are used.",
+      lifelines: "After game over answer the Lifeline question to retry.",
+      standing: standing,
+      gameKey: "fraud_detective",
+      startLabel: "Begin investigation",
+      insightTitle: PRIMER.title,
+      insightBullets: PRIMER.body,
+    } : undefined,
+    gameState,
+    caseIndex,
+    currentCase,
+    graphNodes,
+    graphEdges,
+    selectedNode,
+    caseTimeLeft,
+    caseScore,
+    bonusScore,
+    solved,
+    revealed,
+    recoverySkipsRemaining,
+    caseFailCanAdvance,
+    caseFailSec,
+    caseClosedSec,
+    caseFailTab,
+    showClues,
+    showEndGameDialog,
+    lifelineQuestion,
+    lifelineContext,
+    lifelineState,
+    finalResult
+  });
+
   if (gameState === 'rules') {
     return (
-      <Layout title="Fraud Detective" back="/">
-        <RulesScreen 
-          gameName="Fraud Detective"
-          premise="Five graph investigation cases. Find the hidden links that expose the rings."
-          scoring="Up to 100 points - 15 points per case, 10 for 3+ correct and 15 for all 5 correct."
-          endsWhen="A wrong accusation ends your run after 2 skips are used."
-          lifelines="After game over answer the Lifeline question to retry."
-          standing={standing}
-          gameKey="fraud_detective"
-          onStart={startGame}
-          startLabel="Begin investigation"
-          insightTitle={PRIMER.title}
-          insightBullets={PRIMER.body}
-        />
-      </Layout>
+      <>
+        <Layout title="Fraud Detective" back="/">
+          <RulesScreen 
+            gameName="Fraud Detective"
+            premise="Five graph investigation cases. Find the hidden links that expose the rings."
+            scoring="Up to 100 points - 15 points per case, 10 for 3+ correct and 15 for all 5 correct."
+            endsWhen="A wrong accusation ends your run after 2 skips are used."
+            lifelines="After game over answer the Lifeline question to retry."
+            standing={standing}
+            gameKey="fraud_detective"
+            onStart={startGame}
+            startLabel="Begin investigation"
+            insightTitle={PRIMER.title}
+            insightBullets={PRIMER.body}
+          />
+        </Layout>
+
+        <AlertDialog open={showEndGameDialog} onOpenChange={setShowEndGameDialog}>
+          <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
+              <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
+                Are you sure you want to exit? Your score will be submitted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={() => {
+                setShowEndGameDialog(false);
+                endRun(true);
+              }} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
+                Submit & End
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
     );
   }
 
@@ -616,20 +673,8 @@ export default function FraudDetective() {
               {({ resetTransform }) => (
                 <>
                   <div className="absolute right-2 top-2 z-10">
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="size-9 tap"
-                        onClick={() => setIsGraphExpanded((expanded) => !expanded)}
-                        aria-label={isGraphExpanded ? 'Collapse graph' : 'Expand graph'}
-                        aria-pressed={isGraphExpanded}
-                        title={isGraphExpanded ? 'Collapse graph' : 'Expand graph'}
-                      >
-                        {isGraphExpanded ? (
-                          <Minimize2 className="size-4" strokeWidth={1.5} />
-                        ) : (
-                          <Maximize className="size-4" strokeWidth={1.5} />
-                        )}
+                    <Button variant="secondary" size="icon" className="size-9 tap" onClick={() => resetTransform()}>
+                      <Maximize className="size-4" strokeWidth={1.5} />
                     </Button>
                   </div>
 
@@ -752,55 +797,68 @@ export default function FraudDetective() {
                   </TransformComponent>
                 </>
               )}
-            </TransformWrapper>
+        </TransformWrapper>
           </div>
 
-           {!isGraphExpanded && (
-             <div className="shrink-0 mt-2 space-y-1.5">
-              {!isFinished && (
-                <>
-                {/* Objective */}
-                <div className="border border-violet-700/40 bg-violet-700/5">
-                   <div className="flex items-center gap-2 border-b border-violet-700/30 px-3 py-1.5">
-                     <Target className="size-3 shrink-0 text-violet-400" strokeWidth={1.5} />
-                     <span className="font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-violet-400">
-                      Objective
-                    </span>
-                  </div>
-                   <div className="px-3 py-2">
-                     <p className="font-mono text-[13px] text-[var(--text-on-dark)] leading-snug">
-                      {currentCase.instruction}
-                    </p>
-                  </div>
-                </div>
-                {/* Clues */}
-                <div className="border border-amber-500/30 bg-[rgba(245,158,11,0.04)]">
-                  {/* Header */}
-                   <div className="flex items-center gap-2 border-b border-amber-500/20 px-3 py-1.5">
-                     <Fingerprint className="size-3 shrink-0 text-amber-400" strokeWidth={1.5} />
-                     <span className="font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-amber-400">
-                      Clues
-                    </span>
-                     <span className="ml-auto font-mono text-[11px] text-[var(--text-on-dark-faint)] uppercase tracking-widest">
-                      {currentCase.id.replace(/_/g, '-').substring(0, 10).toUpperCase()}
-                    </span>
-                  </div>
-                  {/* Evidence items */}
-                  <div className="divide-y divide-amber-500/10">
-                    {currentCase.clues.map((clue, i) => (
-                       <div key={i} className="flex items-start gap-2 px-3 py-1.5">
-                         <span className="shrink-0 font-mono text-[12px] font-bold tabular-nums text-amber-400 leading-snug pt-px">
-                          {String(i + 1).padStart(2, '0')}
+          <div className="shrink-0 mt-2 space-y-1.5">
+            {!isFinished && (
+              <>
+                <button
+                  onClick={() => setShowClues(!showClues)}
+                  className="tap flex w-full items-center justify-center gap-1.5 rounded border border-violet-700/30 bg-violet-700/10 py-2.5 font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-violet-400 transition-colors hover:bg-violet-700/20"
+                >
+                  <span aria-hidden="true" className="opacity-60">[</span>
+                  <Info className="size-3.5 shrink-0" strokeWidth={2} />
+                  <span>{showClues ? 'Hide Clues' : 'Clues'}</span>
+                  <span aria-hidden="true" className="opacity-60">]</span>
+                </button>
+
+                {showClues && (
+                  <div className="animate-in slide-in-from-bottom-2 fade-in duration-200">
+                    {/* Objective */}
+                    <div className="border border-violet-700/40 bg-violet-700/5 mb-1.5">
+                       <div className="flex items-center gap-2 border-b border-violet-700/30 px-3 py-1.5">
+                         <Target className="size-3 shrink-0 text-violet-400" strokeWidth={1.5} />
+                         <span className="font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-violet-400">
+                          Objective
                         </span>
+                      </div>
+                       <div className="px-3 py-2">
                          <p className="font-mono text-[13px] text-[var(--text-on-dark)] leading-snug">
-                          {clue}
+                          {currentCase.instruction}
                         </p>
                       </div>
-                    ))}
+                    </div>
+                    {/* Clues */}
+                    <div className="border border-amber-500/30 bg-[rgba(245,158,11,0.04)]">
+                      {/* Header */}
+                       <div className="flex items-center gap-2 border-b border-amber-500/20 px-3 py-1.5">
+                         <Fingerprint className="size-3 shrink-0 text-amber-400" strokeWidth={1.5} />
+                         <span className="font-mono text-[12px] font-semibold uppercase tracking-[0.12em] text-amber-400">
+                          Clues
+                        </span>
+                         <span className="ml-auto font-mono text-[11px] text-[var(--text-on-dark-faint)] uppercase tracking-widest">
+                          {currentCase.id.replace(/_/g, '-').substring(0, 10).toUpperCase()}
+                        </span>
+                      </div>
+                      {/* Evidence items */}
+                      <div className="divide-y divide-amber-500/10 max-h-[30vh] overflow-y-auto app-scroll">
+                        {currentCase.clues.map((clue, i) => (
+                           <div key={i} className="flex items-start gap-2 px-3 py-1.5">
+                             <span className="shrink-0 font-mono text-[12px] font-bold tabular-nums text-amber-400 leading-snug pt-px">
+                              {String(i + 1).padStart(2, '0')}
+                            </span>
+                             <p className="font-mono text-[13px] text-[var(--text-on-dark)] leading-snug">
+                              {clue}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-                </>
-              )}
+                )}
+              </>
+            )}
 
               {solved && (
                 <div className="animate-resolve-in border border-violet-500/60 bg-violet-700/10">
@@ -832,7 +890,6 @@ export default function FraudDetective() {
                 </div>
               )}
             </div>
-          )}
 
            <div className="shrink-0 mt-2 pt-2 border-t border-ink-800">
             {!isFinished ? (
@@ -855,6 +912,14 @@ export default function FraudDetective() {
                   onClick={handleSkipCase}
                 >
                   Skip case
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 border-coral-500/30 text-coral-400 hover:bg-coral-500/10 hover:text-coral-300"
+                  onClick={() => endRun(true)}
+                >
+                  End Run
                 </Button>
               </div>
             ) : solved ? (
@@ -1238,6 +1303,7 @@ export default function FraudDetective() {
         question={lifelineQuestion}
         context={lifelineContext}
         gameTitle="Fraud Detective"
+        onStateChange={setLifelineState}
         scoreDisplay={total > 0 ? (
           <div className="relative flex items-baseline gap-1.5 pr-3">
             <span className="font-sans text-display-md font-normal tabular-nums text-white">{total}</span>

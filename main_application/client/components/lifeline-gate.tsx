@@ -44,6 +44,8 @@ interface LifelineGateProps {
   onRetry: () => void;
   /** Called when Exit Run is tapped, or when the 10-second timer expires. */
   onExit: () => void;
+  /** Reports internal state changes for spectator mirroring */
+  onStateChange?: (state: any) => void;
 }
 
 export function LifelineGate({
@@ -54,6 +56,7 @@ export function LifelineGate({
   compact = false,
   onRetry,
   onExit,
+  onStateChange,
 }: LifelineGateProps) {
   // Shuffle options once on mount so the correct position varies between
   // question draws. `correctShuffledIdx` tracks where the right answer lands.
@@ -83,6 +86,17 @@ export function LifelineGate({
     const t = setTimeout(() => setTimeLeft(s => s - 1), 1000);
     return () => clearTimeout(t);
   }, [timeLeft, retryUnlocked, onExit]);
+
+  // Push state to parent for spectator synchronization
+  useEffect(() => {
+    onStateChange?.({
+      shuffled,
+      correctShuffledIdx,
+      timeLeft,
+      selectedIdx,
+      retryUnlocked,
+    });
+  }, [shuffled, correctShuffledIdx, timeLeft, selectedIdx, retryUnlocked, onStateChange]);
 
   const handleSelect = (idx: number) => {
     if (selectedIdx !== null) return; // one attempt per question

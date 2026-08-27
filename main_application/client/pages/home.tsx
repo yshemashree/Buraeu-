@@ -11,6 +11,7 @@ import { ArenaHeader } from '@/components/bureau/arena-header';
 import { QrPanel } from '@/components/qr-panel';
 import { cn } from '@/lib/utils';
 import Landing from '@/pages/landing';
+import { useSyncState } from '@/hooks/useSyncState';
 
 /*
   Copy follows the guideline's voice: declarative, no hype, no exclamation
@@ -91,6 +92,8 @@ export default function Home() {
   const [, setLocation] = useLocation();
   const { session, clearSession } = usePlayerSession();
   const [mounted, setMounted] = useState(false);
+
+  useSyncState(session ? { type: 'hub', session } : { type: 'landing' });
 
   // Mark mounted to avoid hydration mismatch, then enforce session
   useEffect(() => {

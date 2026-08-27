@@ -34,7 +34,17 @@ export async function fetchQuizGamePack(): Promise<Question[]> {
     if (!Array.isArray(body.questions) || body.questions.length === 0) {
       throw new Error('empty question bank');
     }
-    return body.questions;
+    
+    let questions = body.questions;
+    if (questions.length < 10) {
+      const fallback = await fetchLocalFallbackQuestions();
+      questions = Array.from({ length: 10 }, (_, i) => {
+        const level = i + 1;
+        return questions.find((q) => q.level === level) || fallback.find((q) => q.level === level);
+      }).filter(Boolean) as Question[];
+    }
+    
+    return questions;
   } catch {
     return fetchLocalFallbackQuestions();
   }

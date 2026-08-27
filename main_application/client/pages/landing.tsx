@@ -2,9 +2,11 @@ import { useLocation } from 'wouter';
 import { ShieldAlert } from 'lucide-react';
 import { IconTile } from '@/components/bureau/icon-tile';
 import { Layout, ScreenBody } from '@/components/layout';
+import { useSyncState } from '@/hooks/useSyncState';
 
 export default function Landing() {
   const [, setLocation] = useLocation();
+  useSyncState({ type: 'landing' });
 
   return (
     <Layout showHeader={false}>

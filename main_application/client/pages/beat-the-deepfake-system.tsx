@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { v4 as uuidv4 } from 'uuid';
 import { usePlayerSession } from '@/lib/store';
+import { useSyncState } from '@/hooks/useSyncState';
 import { Layout, ScreenBody } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { EyebrowTag } from '@/components/bureau/eyebrow-tag';
@@ -29,6 +30,12 @@ export default function BeatTheDeepfakeSystem() {
 
   const [liveUrl, setLiveUrl] = useState<string | null>(null);
   const [state, setState] = useState<ScreenState>('loading');
+
+  useSyncState({
+    type: 'rules_custom',
+    game: 'spoof_the_system',
+    screenState: state
+  });
 
   useEffect(() => {
     let cancelled = false;

@@ -5,6 +5,16 @@ import { Layout } from '@/components/layout';
 import { RulesScreen } from '@/components/rules-screen';
 import { Button } from '@/components/ui/button';
 import { RetryOptions } from '@/components/retry-options';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { GameEndScreen } from '@/components/game-end-screen';
 import { LEVELS, QUESTIONS, Level, Question } from '@/data/quiz';
 import { LifelineGate } from '@/components/lifeline-gate';
@@ -42,6 +52,7 @@ export default function SpotTheFraud() {
 
   const [gameState, setGameState] = useState<GameState>('rules');
   const [levelIndex, setLevelIndex] = useState(0);
+  const [showEndGameDialog, setShowEndGameDialog] = useState(false);
   
   // Game session identifiers
   const runIdRef = useRef<string>('');
@@ -113,23 +124,6 @@ export default function SpotTheFraud() {
       setTimeLeft(currentLevel.timerSec);
     }
   }, [gameState, levelIndex, currentLevel, questionPool]);
-
-  useSyncState({
-    type: gameState === 'playing' || gameState === 'explain' ? 'active' : 'idle',
-    game: 'spot_the_fraud',
-    gameState,
-    levelIndex,
-    currentLevel,
-    currentQuestion,
-    shuffledOptions,
-    imageOptions,
-    selectedIndices,
-    timeLeft,
-    score,
-    explainResult,
-    pointsEarned,
-    recoverySkipsRemaining
-  });
 
 
   // Timer logic
@@ -365,9 +359,10 @@ export default function SpotTheFraud() {
   const lastPayloadRef = useRef<RunInput | null>(null);
   const [lifelineQuestion, setLifelineQuestion] = useState<LifelineQuestion | null>(null);
   const [lifelineContext, setLifelineContext] = useState<'gameover' | 'reentry'>('gameover');
+  const [lifelineState, setLifelineState] = useState<any>(null);
   const reentryChecked = useRef(false);
 
-  const endRun = () => {
+  const endRun = (isEarlyExit: boolean = false) => {
     const completedPerfectly = cleared.length === LEVELS.length;
     if (session) {
       let tier = "Participation";
@@ -384,8 +379,8 @@ export default function SpotTheFraud() {
           levelReached: levelIndex + 1,
           cleared,
           nearMiss: nearMissLevel,
-           skipped,
-           recoverySkipsUsed: SPOT_RECOVERY_SKIP_COUNT - recoverySkipsRemaining,
+          skipped,
+          recoverySkipsUsed: SPOT_RECOVERY_SKIP_COUNT - recoverySkipsRemaining,
           tier,
           perLevel: perLevelData
         }
@@ -396,7 +391,7 @@ export default function SpotTheFraud() {
       submitRun.mutate({ data: payload }, {
         onSuccess: (res) => {
           setFinalResult(res);
-          setGameState(completedPerfectly ? 'highscore' : 'lifeline');
+          setGameState(completedPerfectly || isEarlyExit ? 'highscore' : 'lifeline');
         },
         onError: () => {
           setGameState('error');
@@ -404,7 +399,7 @@ export default function SpotTheFraud() {
       });
     } else {
       setFinalResult({ pointsRecorded: score, isPersonalBest: false, standing: { rank: 0, behind: 0 } });
-      setGameState(completedPerfectly ? 'highscore' : 'lifeline');
+      setGameState(completedPerfectly || isEarlyExit ? 'highscore' : 'lifeline');
     }
   };
 
@@ -421,6 +416,40 @@ export default function SpotTheFraud() {
       });
     }
   };
+
+  useSyncState({
+    type: gameState === 'rules' ? 'rules' : gameState === 'highscore' ? 'highscore' : gameState === 'playing' || gameState === 'explain' || gameState === 'lifeline' ? 'active' : 'idle',
+    game: 'spot_the_fraud',
+    rulesProps: gameState === 'rules' ? {
+      gameName: "Spot the Fraud",
+      premise: "Ten levels of fraud rings, mule chains, and synthetic media. Four options each - harder levels need two answers.",
+      scoring: "Up to 100 points - Banked points stay yours, even if you fail later.",
+      endsWhen: "A wrong answer ends your run once all 3 skips are used.",
+      lifelines: "After game over answer the Lifeline question to retry.",
+      standing: standing,
+      gameKey: "spot_the_fraud",
+    } : undefined,
+    gameState,
+    levelIndex,
+    currentLevel,
+    currentQuestion,
+    shuffledOptions,
+    imageOptions,
+    selectedIndices,
+    timeLeft,
+    score,
+    explainResult,
+    pointsEarned,
+    recoverySkipsRemaining,
+    explainFailSec,
+    correctExplainSec,
+    failureCanAdvance,
+    showEndGameDialog,
+    lifelineQuestion,
+    lifelineContext,
+    lifelineState,
+    finalResult
+  });
 
   if (gameState === 'rules') {
     return (
@@ -447,7 +476,7 @@ export default function SpotTheFraud() {
     const isSkipped = explainResult === 'skipped';
 
     return (
-      <Layout title="Spot the Fraud" back="/">
+      <Layout title="Spot the Fraud" back={() => setShowEndGameDialog(true)}>
         <div className="flex min-h-0 flex-1 flex-col pt-4 pb-4">
           <div className="shrink-0">
             <div className="flex">
@@ -614,6 +643,7 @@ export default function SpotTheFraud() {
         question={lifelineQuestion}
         context={lifelineContext}
         gameTitle="Spot the Fraud"
+        onStateChange={setLifelineState}
         scoreDisplay={score > 0 ? (
           <div className="relative flex items-baseline gap-1.5 pr-3">
             <span className="font-sans text-display-md font-normal tabular-nums text-white">{score}</span>
@@ -652,10 +682,11 @@ export default function SpotTheFraud() {
   const imageQuestionInstruction = currentQuestion?.selectN === 1 ? 'Only One Correct' : 'Two Correct';
 
   return (
-    <Layout 
-      title="Spot the Fraud" 
-      back="/"
-    >
+    <>
+      <Layout 
+        title="Spot the Fraud" 
+        back={() => setShowEndGameDialog(true)}
+      >
       <div className="flex min-h-0 flex-1 flex-col pt-3 pb-4">
         
         {/* Header HUD */}
@@ -838,7 +869,30 @@ export default function SpotTheFraud() {
             </div>
           </div>
         )}
-      </div>
-    </Layout>
+        </div>
+      </Layout>
+
+      <AlertDialog open={showEndGameDialog} onOpenChange={setShowEndGameDialog}>
+        <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
+            <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
+              Are you sure you want to exit? Your score will be submitted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              setShowEndGameDialog(false);
+              endRun(true);
+            }} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
+              Submit & End
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
