@@ -33,6 +33,7 @@ import {
 } from '@/components/bureau';
 import { isDevTestMode } from '@/lib/dev-test-mode';
 import { useSyncState } from '@/hooks/useSyncState';
+import { useBackGuard } from '@/hooks/useBackGuard';
 
 type GameState = 'rules' | 'primer' | 'case' | 'casefail' | 'bonus' | 'lifeline' | 'highscore' | 'error';
 const CASE_TIMER_SECONDS = 45;
@@ -46,6 +47,42 @@ function seededRandom(s: number) {
   return function() {
     s = Math.sin(s) * 10000; return s - Math.floor(s);
   };
+}
+
+/**
+ * Shared exit-confirmation for every screen that holds live run progress
+ * (case, casefail, bonus). Rendered alongside those screens so the header's
+ * back chevron submits-and-ends the run instead of silently dropping it.
+ */
+function EndGameDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
+          <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
+            Are you sure you want to exit? Your score will be submitted.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
+            Submit & End
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
 }
 
 export default function FraudDetective() {
@@ -88,6 +125,14 @@ export default function FraudDetective() {
   const [caseFailTab, setCaseFailTab] = useState<'graph' | 'why'>('graph');
   const [showClues, setShowClues] = useState(false);
   const [showEndGameDialog, setShowEndGameDialog] = useState(false);
+
+  // A hardware/browser back press mid-run must not silently discard the run
+  // the way a normal pop would - route it through the same confirm dialog
+  // as the in-app back chevron.
+  useBackGuard(
+    gameState === 'case' || gameState === 'casefail' || gameState === 'bonus',
+    () => setShowEndGameDialog(true),
+  );
 
   // Current case state
   const currentCase = activeCases[caseIndex];
@@ -546,45 +591,21 @@ export default function FraudDetective() {
 
   if (gameState === 'rules') {
     return (
-      <>
-        <Layout title="Fraud Detective" back="/">
-          <RulesScreen 
-            gameName="Fraud Detective"
-            premise="Five graph investigation cases. Find the hidden links that expose the rings."
-            scoring="Up to 100 points - 15 points per case, 10 for 3+ correct and 15 for all 5 correct."
-            endsWhen="A wrong accusation ends your run after 2 skips are used."
-            lifelines="After game over answer the Lifeline question to retry."
-            standing={standing}
-            gameKey="fraud_detective"
-            onStart={startGame}
-            startLabel="Begin investigation"
-            insightTitle={PRIMER.title}
-            insightBullets={PRIMER.body}
-          />
-        </Layout>
-
-        <AlertDialog open={showEndGameDialog} onOpenChange={setShowEndGameDialog}>
-          <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
-              <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
-                Are you sure you want to exit? Your score will be submitted.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction onClick={() => {
-                setShowEndGameDialog(false);
-                endRun(true);
-              }} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
-                Submit & End
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </>
+      <Layout title="Fraud Detective" back="/">
+        <RulesScreen
+          gameName="Fraud Detective"
+          premise="Five graph investigation cases. Find the hidden links that expose the rings."
+          scoring="Up to 100 points - 15 points per case, 10 for 3+ correct and 15 for all 5 correct."
+          endsWhen="A wrong accusation ends your run after 2 skips are used."
+          lifelines="After game over answer the Lifeline question to retry."
+          standing={standing}
+          gameKey="fraud_detective"
+          onStart={startGame}
+          startLabel="Begin investigation"
+          insightTitle={PRIMER.title}
+          insightBullets={PRIMER.body}
+        />
+      </Layout>
     );
   }
 
@@ -593,9 +614,10 @@ export default function FraudDetective() {
     const showAnswerHints = isFinished || devTestMode;
 
     return (
-      <Layout 
+      <>
+      <Layout
         title="Fraud Detective"
-        back="/"
+        back={() => setShowEndGameDialog(true)}
       >
         <div className="flex min-h-0 flex-1 flex-col pt-3 pb-4">
           {/* Header HUD mirrors Spot the Fraud: context + score, then progress + skips. */}
@@ -934,12 +956,23 @@ export default function FraudDetective() {
           </div>
         </div>
       </Layout>
+
+      <EndGameDialog
+        open={showEndGameDialog}
+        onOpenChange={setShowEndGameDialog}
+        onConfirm={() => {
+          setShowEndGameDialog(false);
+          endRun(true);
+        }}
+      />
+      </>
     );
   }
 
   if (gameState === 'casefail' && currentCase) {
     return (
-      <Layout title={currentCase.sector} back="/">
+      <>
+      <Layout title={currentCase.sector} back={() => setShowEndGameDialog(true)}>
         <ScreenBody className="pt-3 pb-safe">
 
           {/* Header */}
@@ -1142,6 +1175,16 @@ export default function FraudDetective() {
           </div>
         </ScreenBody>
       </Layout>
+
+      <EndGameDialog
+        open={showEndGameDialog}
+        onOpenChange={setShowEndGameDialog}
+        onConfirm={() => {
+          setShowEndGameDialog(false);
+          endRun(true);
+        }}
+      />
+      </>
     );
   }
 
@@ -1150,9 +1193,10 @@ export default function FraudDetective() {
     const answeredRing = bonusAnswers[bonusIndex];
 
     return (
-      <Layout 
-        title="Bonus Round" 
-        back="/"
+      <>
+      <Layout
+        title="Bonus Round"
+        back={() => setShowEndGameDialog(true)}
         headerRight={
           <div className="font-mono text-eyebrow-micro text-[var(--text-on-dark-muted)] uppercase tracking-[0.03em] pr-1">
             {bonusIndex + 1}/{BONUS.questions.length}
@@ -1257,6 +1301,16 @@ export default function FraudDetective() {
           </div>
         </ScreenBody>
       </Layout>
+
+      <EndGameDialog
+        open={showEndGameDialog}
+        onOpenChange={setShowEndGameDialog}
+        onConfirm={() => {
+          setShowEndGameDialog(false);
+          endRun(true);
+        }}
+      />
+      </>
     );
   }
 

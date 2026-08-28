@@ -59,7 +59,7 @@ const formSchema = z.object({
  */
 const GAME_PATHS: Record<string, string> = {
   '/spot-the-fraud': 'Spot the Fraud',
-  '/spoof-the-system': 'Spoof the System',
+  '/beat-the-deepfake-system': 'Spoof the System',
   '/fraud-detective': 'Fraud Detective',
 };
 

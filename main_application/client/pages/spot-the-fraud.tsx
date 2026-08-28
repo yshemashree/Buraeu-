@@ -29,6 +29,7 @@ import { IconTile } from '@/components/bureau/icon-tile';
 import { drawImageQuizOptions, type ImageQuizOption } from '@/data/image-quiz-pool';
 import { isDevTestMode } from '@/lib/dev-test-mode';
 import { useSyncState } from '@/hooks/useSyncState';
+import { useBackGuard } from '@/hooks/useBackGuard';
 
 
 // We shuffle options but keep track of their original 1-based index
@@ -42,6 +43,42 @@ const SPOT_RECOVERY_SKIP_COUNT = 3;
 const EXPLAIN_FAIL_SECONDS = 10;
 const RECOVERY_AUTO_CONTINUE_SECONDS = 5;
 
+/**
+ * Shared exit-confirmation for every screen that holds live run progress
+ * (playing, explain). Rendered alongside those screens so the header's back
+ * chevron submits-and-ends the run instead of silently dropping it.
+ */
+function EndGameDialog({
+  open,
+  onOpenChange,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
+          <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
+            Are you sure you want to exit? Your score will be submitted.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
+            Submit & End
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function SpotTheFraud() {
   const { session } = usePlayerSession();
   const [, setLocation] = useLocation();
@@ -53,7 +90,15 @@ export default function SpotTheFraud() {
   const [gameState, setGameState] = useState<GameState>('rules');
   const [levelIndex, setLevelIndex] = useState(0);
   const [showEndGameDialog, setShowEndGameDialog] = useState(false);
-  
+
+  // A hardware/browser back press mid-run must not silently discard the run
+  // the way a normal pop would - route it through the same confirm dialog
+  // as the in-app back chevron.
+  useBackGuard(
+    gameState === 'playing' || gameState === 'explain',
+    () => setShowEndGameDialog(true),
+  );
+
   // Game session identifiers
   const runIdRef = useRef<string>('');
   useEffect(() => {
@@ -476,6 +521,7 @@ export default function SpotTheFraud() {
     const isSkipped = explainResult === 'skipped';
 
     return (
+      <>
       <Layout title="Spot the Fraud" back={() => setShowEndGameDialog(true)}>
         <div className="flex min-h-0 flex-1 flex-col pt-4 pb-4">
           <div className="shrink-0">
@@ -602,6 +648,16 @@ export default function SpotTheFraud() {
           </div>
         </div>
       </Layout>
+
+      <EndGameDialog
+        open={showEndGameDialog}
+        onOpenChange={setShowEndGameDialog}
+        onConfirm={() => {
+          setShowEndGameDialog(false);
+          endRun(true);
+        }}
+      />
+      </>
     );
   }
 
@@ -872,27 +928,14 @@ export default function SpotTheFraud() {
         </div>
       </Layout>
 
-      <AlertDialog open={showEndGameDialog} onOpenChange={setShowEndGameDialog}>
-        <AlertDialogContent className="bg-ink-900 border-ink-800 text-white w-[85vw] max-w-[320px] rounded-lg p-5">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="font-sans text-[20px] text-white">End Game Early?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[14px] leading-snug text-[var(--text-on-dark-muted)]">
-              Are you sure you want to exit? Your score will be submitted.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] border-ink-800 text-white hover:bg-ink-800 hover:text-white">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setShowEndGameDialog(false);
-              endRun(true);
-            }} className="font-mono uppercase text-eyebrow-micro tracking-[0.03em] bg-violet-700 text-white hover:bg-violet-600">
-              Submit & End
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <EndGameDialog
+        open={showEndGameDialog}
+        onOpenChange={setShowEndGameDialog}
+        onConfirm={() => {
+          setShowEndGameDialog(false);
+          endRun(true);
+        }}
+      />
     </>
   );
 }
